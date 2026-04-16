@@ -1,0 +1,88 @@
+{
+  "name": "mdword-by-jair-lima",
+  "version": "0.1.0",
+  "private": true,
+  "productName": "MDWord",
+  "author": "Jair Lima",
+  "description": "Editor visual de Markdown puro com fluxo inspirado no WordPad.",
+  "main": "src/main/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron\"",
+    "dev:renderer": "vite --config vite.config.mjs",
+    "dev:electron": "wait-on tcp:5173 && electron .",
+    "build": "vite build --config vite.config.mjs",
+    "build:ocr": "python scripts/build_ocr_runtime.py",
+    "dist": "npm run build:ocr && electron-builder",
+    "start": "electron .",
+    "make:icon": "python scripts/make_icon.py"
+  },
+  "build": {
+    "appId": "br.com.jairlima.mdword",
+    "productName": "MDWord",
+    "icon": "assets/app-icon.ico",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "src/main/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets"
+      },
+      {
+        "from": "tools\\ocr-runtime",
+        "to": "ocr-runtime"
+      }
+    ],
+    "fileAssociations": [
+      {
+        "ext": "md",
+        "name": "Markdown Document",
+        "description": "Documento Markdown aberto com MDWord",
+        "icon": "assets/app-icon.ico",
+        "role": "Editor"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "MDWord-${version}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true
+    }
+  },
+  "dependencies": {
+    "@toast-ui/editor": "^3.2.2",
+    "@toast-ui/react-editor": "^3.2.3",
+    "html-to-docx": "^1.8.0",
+    "markdown-it": "^14.1.0",
+    "mammoth": "^1.11.0",
+    "pdf-parse": "^1.1.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "turndown": "^7.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.0",
+    "concurrently": "^9.2.1",
+    "electron": "^37.5.0",
+    "electron-builder": "^26.0.12",
+    "vite": "^7.1.12",
+    "wait-on": "^8.0.5"
+  }
+}

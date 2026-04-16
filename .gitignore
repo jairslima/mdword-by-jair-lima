@@ -1,0 +1,17 @@
+node_modules/
+dist/
+release/
+out/
+coverage/
+.vite/
+*.log
+*.tmp
+*.temp
+*.local
+.env
+.env.*
+__pycache__/
+*.pyc
+tools/ocr-build/
+tools/ocr-dist/
+tools/ocr-runtime/
