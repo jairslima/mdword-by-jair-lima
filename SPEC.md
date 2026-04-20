@@ -8,7 +8,7 @@ Objetivo principal: fornecer um editor visual desktop para arquivos Markdown pur
 
 Problema que resolve: editar Markdown como documento formatado, sem expor marcadores ao usuario no modo visual, mantendo o arquivo final em `.md`.
 
-Estado atual: base funcional em Electron com editor WYSIWYG, abertura e salvamento de Markdown, impressao HTML, importacao de DOCX e PDF com OCR opcional, exportacao para DOCX e PDF, auto save, recentes, runtime OCR empacotado e empacotamento Windows validado.
+Estado atual: base funcional em Electron com editor WYSIWYG, ribbon de ferramentas em perfil Markdown puro, abertura e salvamento de Markdown, impressao HTML, importacao de DOCX e PDF com OCR opcional, exportacao para DOCX via md2docx, exportacao para PDF, auto save, recentes, runtime OCR empacotado e empacotamento Windows validado.
 
 ## 2. Escopo
 
@@ -46,8 +46,8 @@ Componentes principais:
 2. `src/main/conversion.cjs`, importacao e exportacao.
 3. `src/main/markdown.cjs`, serializacao e renderizacao segura.
 4. `src/main/preload.cjs`, ponte IPC segura.
-5. `src/renderer/App.jsx`, shell visual e fluxo do editor.
-6. `src/renderer/styles.css`, identidade visual inspirada no WordPad.
+5. `src/renderer/App.jsx`, shell visual, ribbon e fluxo do editor.
+6. `src/renderer/styles.css`, identidade visual e faixa de ferramentas inspiradas no WordPad.
 
 Fluxo geral da aplicacao:
 
@@ -55,6 +55,7 @@ Fluxo geral da aplicacao:
 2. O app salva sempre `editor.getMarkdown()`.
 3. O processo principal executa abrir, salvar, imprimir e converter.
 4. Impressao e exportacoes usam o Markdown como fonte unica.
+5. O menu nativo pode abrir Markdown diretamente e enviar o documento carregado ao renderer por IPC.
 
 ## 4. Dependencias e ambiente
 
@@ -68,7 +69,7 @@ Dependencias externas relevantes:
 2. Mammoth para DOCX para HTML.
 3. Turndown para HTML para Markdown.
 4. markdown-it para renderizacao.
-5. html-to-docx para exportacao DOCX.
+5. md2docx para exportacao DOCX.
 6. pdf-parse para extracao textual de PDF.
 7. Python com PyMuPDF, Pillow e pytesseract para gerar o helper OCR empacotado.
 8. Runtime local do Tesseract embarcado em `tools/ocr-runtime` e distribuido no instalador.
@@ -124,6 +125,8 @@ Decisoes arquiteturais importantes:
 3. O Markdown e a fonte de verdade para salvar, imprimir e exportar.
 4. OCR de PDF pode entrar automaticamente quando a extracao textual e insuficiente.
 5. O app empacotado deve preferir o runtime OCR embarcado, sem depender de Python no destino.
+6. A exportacao DOCX deve preferir o runtime `md2docx.exe` empacotado, pois ele preserva mais recursos de Markdown do que a conversao HTML intermediaria.
+7. A ribbon deve priorizar comandos que cabem no perfil Markdown puro: arquivo, negrito, italico, codigo, titulos, listas, citacao, linha, bloco de codigo, link, imagem por URL e conversoes.
 
 Convencoes relevantes:
 
@@ -146,11 +149,12 @@ O que ja esta pronto:
 
 1. Estrutura do aplicativo.
 2. Shell visual estilo WordPad.
-3. Editor WYSIWYG com toolbar filtrada.
+3. Editor WYSIWYG com toolbar filtrada e ribbon superior estilo WordPad.
 4. Abrir, salvar, salvar como, importar DOCX, importar PDF, importar PDF com OCR, exportar DOCX, exportar PDF e imprimir.
 5. Auto save em arquivo salvo e rascunho local para recuperacao.
 6. Lista de arquivos recentes.
 7. Runtime OCR empacotado com helper executavel e Tesseract minimo.
+8. Runtime md2docx empacotado para exportacao DOCX.
 
 O que esta em andamento:
 

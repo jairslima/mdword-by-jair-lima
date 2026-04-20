@@ -16,7 +16,7 @@ tools/ocr-build/
 tools/ocr-dist/
 tools/ocr-runtime/
 
-# Seguranca — auditoria 2026-05-28
+# Seguranca, auditoria 2026-05-28
 *.key
 secrets.*
 *.pkl
@@ -24,3 +24,4 @@ secrets.*
 credentials.*
 *.p12
 *.pfx
+tools/md2docx-runtime/

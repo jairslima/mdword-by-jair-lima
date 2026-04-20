@@ -9,6 +9,13 @@ const toolbarItems = [
   ['code', 'codeblock']
 ];
 
+const headingOptions = [
+  { label: 'Estilo', value: '' },
+  { label: 'Titulo 1', value: 'heading1' },
+  { label: 'Titulo 2', value: 'heading2' },
+  { label: 'Titulo 3', value: 'heading3' }
+];
+
 const initialText = `# MDWord
 
 Abra um arquivo Markdown ou comece a escrever aqui.
@@ -41,6 +48,45 @@ export default function App() {
   const getEditor = () => editorRef.current?.getInstance();
 
   const getMarkdown = () => getEditor()?.getMarkdown() ?? '';
+
+  const runEditorCommand = (command, payload) => {
+    const editor = getEditor();
+    if (!editor) {
+      return;
+    }
+
+    editor.exec(command, payload);
+    editor.focus();
+  };
+
+  const handleHeading = (event) => {
+    const value = event.target.value;
+    if (!value) {
+      return;
+    }
+
+    runEditorCommand('heading', { level: Number(value.replace('heading', '')) });
+  };
+
+  const handleLink = () => {
+    const linkUrl = window.prompt('URL do link');
+    if (!linkUrl) {
+      return;
+    }
+
+    const linkText = window.prompt('Texto do link', linkUrl) || linkUrl;
+    runEditorCommand('addLink', { linkUrl, linkText });
+  };
+
+  const handleImage = () => {
+    const imageUrl = window.prompt('URL da imagem');
+    if (!imageUrl) {
+      return;
+    }
+
+    const altText = window.prompt('Texto alternativo', 'Imagem') || 'Imagem';
+    runEditorCommand('addImage', { imageUrl, altText });
+  };
 
   const setMarkdown = (markdown) => {
     const editor = getEditor();
@@ -232,6 +278,10 @@ export default function App() {
   }, [dirty, filePath]);
 
   useEffect(() => {
+    const unsubscribePayload = window.mdword.onDocumentPayload((payload) => {
+      applyDocument(payload, payload?.status || 'Arquivo aberto');
+    });
+
     const unsubscribe = window.mdword.onMenuAction((action) => {
       const actions = {
         new: handleNew,
@@ -249,7 +299,10 @@ export default function App() {
       actions[action]?.();
     });
 
-    return unsubscribe;
+    return () => {
+      unsubscribePayload();
+      unsubscribe();
+    };
   }, [filePath, dirty]);
 
   return (
@@ -269,25 +322,85 @@ export default function App() {
       </header>
 
       <nav className="ribbon">
-        <div className="ribbon-group">
-          <button onClick={handleNew}>Novo</button>
-          <button onClick={handleOpen}>Abrir MD</button>
-          <button onClick={handleSave}>Salvar</button>
-          <button onClick={handleSaveAs}>Salvar como</button>
+        <div className="ribbon-group file-group" aria-label="Arquivo">
+          <button className="ribbon-command large" onClick={handleNew} title="Novo documento">
+            <span className="command-icon">N</span>
+            <span>Novo</span>
+          </button>
+          <button className="ribbon-command large" onClick={handleOpen} title="Abrir Markdown">
+            <span className="command-icon">A</span>
+            <span>Abrir</span>
+          </button>
+          <button className="ribbon-command large" onClick={handleSave} title="Salvar">
+            <span className="command-icon">S</span>
+            <span>Salvar</span>
+          </button>
+          <button className="ribbon-command large" onClick={handlePrint} title="Imprimir">
+            <span className="command-icon">P</span>
+            <span>Imprimir</span>
+          </button>
+          <span className="ribbon-label">Arquivo</span>
         </div>
 
-        <div className="ribbon-group">
-          <button onClick={handleImportDocx}>Importar DOCX</button>
-          <button onClick={handleImportPdf}>Importar PDF</button>
-          <button onClick={handleImportPdfOcr}>Importar PDF com OCR</button>
-          <button onClick={handleExportDocx}>Salvar como DOCX</button>
-          <button onClick={handleExportPdf}>Exportar PDF</button>
-          <button onClick={handlePrint}>Imprimir</button>
+        <div className="ribbon-group font-group" aria-label="Fonte">
+          <select className="format-select" defaultValue="" onChange={handleHeading} title="Estilo do paragrafo">
+            {headingOptions.map((option) => (
+              <option key={option.value || 'placeholder'} value={option.value} disabled={!option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <div className="command-row">
+            <button className="icon-command strong" onClick={() => runEditorCommand('bold')} title="Negrito">B</button>
+            <button className="icon-command italic" onClick={() => runEditorCommand('italic')} title="Italico">I</button>
+            <button className="icon-command code-mark" onClick={() => runEditorCommand('code')} title="Codigo">{"<>"}</button>
+          </div>
+          <span className="ribbon-label">Fonte</span>
         </div>
 
-        <div className="ribbon-group status-group">
-          <span className="mode-chip">Visual com alternancia para Markdown</span>
-          <span className="profile-chip">Perfil Markdown puro</span>
+        <div className="ribbon-group paragraph-group" aria-label="Paragrafo">
+          <div className="command-row">
+            <button className="icon-command" onClick={() => runEditorCommand('bulletList')} title="Lista com marcadores">Lista</button>
+            <button className="icon-command" onClick={() => runEditorCommand('orderedList')} title="Lista numerada">1.</button>
+            <button className="icon-command" onClick={() => runEditorCommand('blockQuote')} title="Citacao">"</button>
+          </div>
+          <div className="command-row">
+            <button className="icon-command" onClick={() => runEditorCommand('hr')} title="Linha horizontal">Linha</button>
+            <button className="icon-command" onClick={() => runEditorCommand('codeBlock')} title="Bloco de codigo">Bloco</button>
+          </div>
+          <span className="ribbon-label">Paragrafo</span>
+        </div>
+
+        <div className="ribbon-group insert-group" aria-label="Inserir">
+          <button className="ribbon-command" onClick={handleLink} title="Inserir link">
+            <span className="command-icon">L</span>
+            <span>Link</span>
+          </button>
+          <button className="ribbon-command" onClick={handleImage} title="Inserir imagem por URL">
+            <span className="command-icon">IMG</span>
+            <span>Imagem</span>
+          </button>
+          <span className="ribbon-label">Inserir</span>
+        </div>
+
+        <div className="ribbon-group convert-group" aria-label="Conversao">
+          <button className="ribbon-command" onClick={handleImportDocx} title="Importar DOCX">
+            <span className="command-icon">DOCX</span>
+            <span>Importar</span>
+          </button>
+          <button className="ribbon-command" onClick={handleImportPdf} title="Importar PDF">
+            <span className="command-icon">PDF</span>
+            <span>Importar</span>
+          </button>
+          <button className="ribbon-command" onClick={handleExportDocx} title="Salvar como DOCX">
+            <span className="command-icon">DOCX</span>
+            <span>Exportar</span>
+          </button>
+          <button className="ribbon-command" onClick={handleExportPdf} title="Exportar PDF">
+            <span className="command-icon">PDF</span>
+            <span>Exportar</span>
+          </button>
+          <span className="ribbon-label">Conversao</span>
         </div>
       </nav>
 

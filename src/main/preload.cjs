@@ -12,6 +12,11 @@ contextBridge.exposeInMainWorld('mdword', {
   exportPdf: (payload) => ipcRenderer.invoke('file:export-pdf', payload),
   printDocument: (payload) => ipcRenderer.invoke('file:print', payload),
   openRecent: (filePath) => ipcRenderer.invoke('file:open-recent', filePath),
+  onDocumentPayload: (listener) => {
+    const wrapped = (_event, payload) => listener(payload);
+    ipcRenderer.on('document:payload', wrapped);
+    return () => ipcRenderer.removeListener('document:payload', wrapped);
+  },
   onMenuAction: (listener) => {
     const wrapped = (_event, action) => listener(action);
     ipcRenderer.on('menu:action', wrapped);

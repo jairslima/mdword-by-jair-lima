@@ -25,7 +25,7 @@ button {
   border: 1px solid #b69466;
   background: linear-gradient(180deg, #fff8ef 0%, #efdebf 100%);
   color: #3c2c18;
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 9px 14px;
   font-size: 13px;
   font-weight: 600;
@@ -40,7 +40,7 @@ button:hover {
 .shell {
   display: grid;
   height: 100%;
-  grid-template-rows: 72px 70px 1fr 34px;
+  grid-template-rows: 60px 124px 1fr 34px;
   background:
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.55), transparent 34%),
     linear-gradient(180deg, #e7dac6 0%, #d7c0a1 100%);
@@ -108,18 +108,21 @@ button:hover {
 
 .ribbon {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 10px 18px;
+  align-items: stretch;
+  gap: 8px;
+  padding: 8px 10px 6px;
   border-bottom: 1px solid #b89d77;
   background: linear-gradient(180deg, rgba(255, 250, 241, 0.85) 0%, rgba(233, 214, 183, 0.95) 100%);
+  overflow-x: auto;
 }
 
 .ribbon-group {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding-right: 14px;
+  gap: 6px;
+  min-height: 104px;
+  padding: 6px 10px 20px;
   border-right: 1px solid rgba(120, 84, 39, 0.25);
 }
 
@@ -127,18 +130,92 @@ button:hover {
   border-right: none;
 }
 
-.status-group {
-  margin-left: auto;
+.ribbon-label {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 3px;
+  color: #775832;
+  font-size: 11px;
+  text-align: center;
 }
 
-.mode-chip,
-.profile-chip {
-  padding: 7px 10px;
-  border-radius: 999px;
+.ribbon-command {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  min-width: 58px;
+  height: 70px;
+  padding: 6px 8px;
+  font-size: 11px;
+  line-height: 1.1;
+}
+
+.ribbon-command.large {
+  min-width: 62px;
+  height: 76px;
+}
+
+.command-icon {
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  height: 28px;
+  padding: 0 5px;
+  border: 1px solid rgba(132, 96, 52, 0.25);
+  border-radius: 4px;
+  background: #fffdf8;
+  color: #654014;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.font-group,
+.paragraph-group {
+  display: grid;
+  grid-template-rows: 32px 32px;
+  align-content: start;
+}
+
+.paragraph-group {
+  min-width: 190px;
+}
+
+.format-select {
+  width: 142px;
+  height: 30px;
+  border: 1px solid #b69466;
+  border-radius: 4px;
+  background: #fffdf8;
+  color: #3c2c18;
+  font: 13px "Segoe UI", Tahoma, sans-serif;
+  padding: 0 8px;
+}
+
+.command-row {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.icon-command {
+  min-width: 34px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 4px;
   font-size: 12px;
-  font-weight: 700;
-  background: rgba(255, 255, 255, 0.7);
-  color: #6a4b23;
+}
+
+.icon-command.strong {
+  font-weight: 800;
+}
+
+.icon-command.italic {
+  font-style: italic;
+}
+
+.icon-command.code-mark {
+  font-family: Consolas, "Courier New", monospace;
 }
 
 .workspace {

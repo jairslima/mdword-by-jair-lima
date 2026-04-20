@@ -1,14 +1,14 @@
 const fs = require('node:fs/promises');
 const fssync = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
 const mammoth = require('mammoth');
 const TurndownService = require('turndown');
-const HTMLToDOCX = require('html-to-docx');
 const pdfParse = require('pdf-parse');
 
-const { normalizeMarkdown, renderMarkdown } = require('./markdown.cjs');
+const { normalizeMarkdown } = require('./markdown.cjs');
 const execFileAsync = promisify(execFile);
 
 const turndown = new TurndownService({
@@ -40,6 +40,17 @@ function getOcrExecutablePath() {
     return bundledExe;
   }
   return null;
+}
+
+function getMd2DocxExecutablePath() {
+  const root = getProjectRoot();
+  const candidates = [
+    path.join(root, 'md2docx-runtime', 'md2docx.exe'),
+    path.join(root, 'tools', 'md2docx-runtime', 'md2docx.exe'),
+    path.join('C:', 'Users', 'jairs', 'Claude', 'ConversorMD2DocX', 'dist', 'md2docx.exe')
+  ];
+
+  return candidates.find((candidate) => fssync.existsSync(candidate)) || null;
 }
 
 function hasOcrRuntime() {
@@ -147,33 +158,41 @@ async function convertPdfToMarkdownWithOcr(filePath) {
 }
 
 async function exportMarkdownToDocx(filePath, markdown, documentTitle) {
-  const html = `<!doctype html>
-    <html lang="pt-BR">
-      <head>
-        <meta charset="utf-8" />
-        <title>${documentTitle || deriveTitle(filePath)}</title>
-      </head>
-      <body>
-        ${renderMarkdown(markdown)}
-      </body>
-    </html>`;
+  const executable = getMd2DocxExecutablePath();
+  if (!executable) {
+    throw new Error('Runtime md2docx nao encontrado.');
+  }
 
-  const buffer = await HTMLToDOCX(html, null, {
-    table: { row: { cantSplit: true } },
-    pageSize: {
-      width: 11906,
-      height: 16838
-    },
-    margins: {
-      top: 1080,
-      right: 900,
-      bottom: 1080,
-      left: 900
-    },
-    font: 'Segoe UI'
-  });
+  const outputDir = path.dirname(filePath);
+  const baseName = path.basename(filePath, path.extname(filePath)) || documentTitle || 'documento';
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mdword-md2docx-'));
+  const tempMarkdownPath = path.join(tempDir, `${baseName}.md`);
 
-  await fs.writeFile(filePath, buffer);
+  try {
+    await fs.writeFile(tempMarkdownPath, normalizeMarkdown(markdown), 'utf8');
+    await execFileAsync(
+      executable,
+      [tempMarkdownPath, '--force', '--output', outputDir],
+      {
+        cwd: tempDir,
+        windowsHide: true,
+        maxBuffer: 1024 * 1024 * 20
+      }
+    );
+
+    const generatedPath = path.join(outputDir, `${baseName}.docx`);
+    if (!fssync.existsSync(generatedPath)) {
+      throw new Error('md2docx terminou sem gerar o arquivo DOCX esperado.');
+    }
+
+    if (generatedPath !== filePath) {
+      await fs.copyFile(generatedPath, filePath);
+      await fs.rm(generatedPath, { force: true });
+    }
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+
   return filePath;
 }
 

@@ -72,7 +72,7 @@ function buildMenu() {
       label: 'Arquivo',
       submenu: [
         { label: 'Novo', click: () => sendMenuAction('new') },
-        { label: 'Abrir Markdown', click: () => sendMenuAction('open') },
+        { label: 'Abrir Markdown', click: () => openMarkdownFromMenu() },
         { type: 'separator' },
         { label: 'Salvar', click: () => sendMenuAction('save') },
         { label: 'Salvar como', click: () => sendMenuAction('saveAs') },
@@ -119,6 +119,12 @@ function buildMenu() {
 function sendMenuAction(action) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('menu:action', action);
+  }
+}
+
+function sendDocumentPayload(payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('document:payload', payload);
   }
 }
 
@@ -191,6 +197,26 @@ async function promptOpenFile(filters) {
   }
 
   return result.filePaths[0];
+}
+
+async function openMarkdownFromMenu() {
+  try {
+    const filePath = await promptOpenFile([
+      { name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }
+    ]);
+
+    if (!filePath) {
+      return;
+    }
+
+    const payload = await readFileUtf8(filePath);
+    sendDocumentPayload({
+      ...payload,
+      status: `Arquivo aberto: ${path.basename(filePath)}`
+    });
+  } catch (error) {
+    dialog.showErrorBox('Falha ao abrir arquivo', error.message || String(error));
+  }
 }
 
 async function printHtml(html, outputPdfPath) {
