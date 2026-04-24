@@ -1,4 +1,5 @@
 const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
+const fsSync = require('node:fs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
@@ -13,11 +14,16 @@ const {
 const isDev = !app.isPackaged;
 let recentDirectory = '';
 
+app.commandLine.appendSwitch('no-sandbox');
+app.commandLine.appendSwitch('disable-gpu-sandbox');
+
 let mainWindow = null;
 let settingsPath = '';
+let pendingLaunchDocument = null;
 let appSettings = {
   recentFiles: []
 };
+const supportedLaunchExtensions = new Set(['.md', '.markdown', '.txt', '.docx', '.pdf']);
 
 async function loadSettings() {
   settingsPath = path.join(app.getPath('userData'), 'settings.json');
@@ -33,6 +39,7 @@ async function saveSettings() {
   if (!settingsPath) {
     settingsPath = path.join(app.getPath('userData'), 'settings.json');
   }
+  await fs.mkdir(path.dirname(settingsPath), { recursive: true });
   await fs.writeFile(settingsPath, JSON.stringify(appSettings, null, 2), 'utf8');
 }
 
@@ -42,6 +49,26 @@ function getAssetPath(fileName) {
   }
 
   return path.join(app.getAppPath(), 'assets', fileName);
+}
+
+function getLaunchFilePath(argv) {
+  for (const arg of argv || []) {
+    if (!arg || arg.startsWith('-')) {
+      continue;
+    }
+
+    const ext = path.extname(arg).toLowerCase();
+    if (!supportedLaunchExtensions.has(ext)) {
+      continue;
+    }
+
+    const filePath = path.resolve(arg);
+    if (fsSync.existsSync(filePath)) {
+      return filePath;
+    }
+  }
+
+  return '';
 }
 
 function getRecentDirectory() {
@@ -63,7 +90,11 @@ async function pushRecentFile(filePath) {
 
   const next = [filePath, ...appSettings.recentFiles.filter((item) => item !== filePath)].slice(0, 8);
   appSettings.recentFiles = next;
-  await saveSettings();
+  try {
+    await saveSettings();
+  } catch (error) {
+    console.warn(`Nao foi possivel salvar recentes: ${error.message || String(error)}`);
+  }
 }
 
 function buildMenu() {
@@ -128,6 +159,11 @@ function sendDocumentPayload(payload) {
   }
 }
 
+function queueLaunchDocument(payload) {
+  pendingLaunchDocument = payload;
+  sendDocumentPayload(payload);
+}
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1480,
@@ -137,14 +173,20 @@ function createMainWindow() {
     backgroundColor: '#e3d7c1',
     title: 'MDWord',
     icon: getAssetPath('app-icon.png'),
+    autoHideMenuBar: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      sandbox: false
     }
   });
 
-  Menu.setApplicationMenu(buildMenu());
+  const appMenu = buildMenu();
+  Menu.setApplicationMenu(appMenu);
+  mainWindow.setMenu(appMenu);
+  mainWindow.setAutoHideMenuBar(false);
+  mainWindow.setMenuBarVisibility(true);
 
   if (isDev) {
     mainWindow.loadURL('http://127.0.0.1:5173');
@@ -219,6 +261,23 @@ async function openMarkdownFromMenu() {
   }
 }
 
+async function openLaunchFile(filePath) {
+  if (!filePath) {
+    return;
+  }
+
+  try {
+    const payload = await openAnySupportedFile(filePath);
+    const title = path.basename(payload.filePath || payload.sourcePath || filePath);
+    queueLaunchDocument({
+      ...payload,
+      status: `Arquivo aberto: ${title}`
+    });
+  } catch (error) {
+    dialog.showErrorBox('Falha ao abrir arquivo', error.message || String(error));
+  }
+}
+
 async function printHtml(html, outputPdfPath) {
   const tempWindow = new BrowserWindow({
     show: false,
@@ -266,6 +325,12 @@ ipcMain.handle('app:get-state', async () => ({
   pureMarkdownProfile: true,
   recentFiles: appSettings.recentFiles
 }));
+
+ipcMain.handle('app:consume-pending-document', async () => {
+  const payload = pendingLaunchDocument;
+  pendingLaunchDocument = null;
+  return payload || { canceled: true };
+});
 
 ipcMain.handle('file:open-markdown', async () => {
   const filePath = await promptOpenFile([
@@ -405,9 +470,30 @@ ipcMain.handle('file:print', async (_event, payload) => {
   return printHtml(html, null);
 });
 
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+
+if (gotSingleInstanceLock) {
+  app.on('second-instance', async (_event, argv) => {
+    const filePath = getLaunchFilePath(argv);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.focus();
+    }
+    await openLaunchFile(filePath);
+  });
+}
+
+app.on('open-file', async (event, filePath) => {
+  event.preventDefault();
+  await openLaunchFile(filePath);
+});
+
 app.whenReady().then(async () => {
   await loadSettings();
   createMainWindow();
+  await openLaunchFile(getLaunchFilePath(process.argv));
 });
 
 app.on('window-all-closed', () => {

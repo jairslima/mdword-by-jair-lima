@@ -1,14 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Editor } from '@toast-ui/react-editor';
 
-const toolbarItems = [
-  ['heading', 'bold', 'italic'],
-  ['hr', 'quote'],
-  ['ul', 'ol'],
-  ['link', 'image'],
-  ['code', 'codeblock']
-];
-
 const headingOptions = [
   { label: 'Estilo', value: '' },
   { label: 'Titulo 1', value: 'heading1' },
@@ -34,11 +26,14 @@ function getTitleFromPath(filePath) {
 export default function App() {
   const editorRef = useRef(null);
   const autosaveTimerRef = useRef(null);
+  const pendingMarkdownRef = useRef(null);
+  const editorReadyTimerRef = useRef(null);
   const [filePath, setFilePath] = useState('');
   const [status, setStatus] = useState('Pronto');
   const [dirty, setDirty] = useState(false);
   const [recentFiles, setRecentFiles] = useState([]);
   const [lastSavedAt, setLastSavedAt] = useState('');
+  const recentPreview = recentFiles.slice(0, 3);
 
   const refreshAppState = async () => {
     const state = await window.mdword.getAppState();
@@ -91,10 +86,20 @@ export default function App() {
   const setMarkdown = (markdown) => {
     const editor = getEditor();
     if (!editor) {
+      pendingMarkdownRef.current = markdown ?? '';
       return;
     }
 
     editor.setMarkdown(markdown ?? '', false);
+    pendingMarkdownRef.current = null;
+  };
+
+  const flushPendingMarkdown = () => {
+    if (pendingMarkdownRef.current === null) {
+      return;
+    }
+
+    setMarkdown(pendingMarkdownRef.current);
   };
 
   const confirmDiscard = () => {
@@ -237,6 +242,28 @@ export default function App() {
   };
 
   useEffect(() => {
+    flushPendingMarkdown();
+  });
+
+  useEffect(() => {
+    editorReadyTimerRef.current = window.setInterval(() => {
+      if (!getEditor()) {
+        return;
+      }
+
+      flushPendingMarkdown();
+      window.clearInterval(editorReadyTimerRef.current);
+      editorReadyTimerRef.current = null;
+    }, 100);
+
+    return () => {
+      if (editorReadyTimerRef.current) {
+        window.clearInterval(editorReadyTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const bootstrap = async () => {
       const state = await window.mdword.getAppState();
       setRecentFiles(state?.recentFiles || []);
@@ -245,6 +272,11 @@ export default function App() {
       setMarkdown(draft || initialText);
       setFilePath(lastPath);
       setStatus(draft ? 'Rascunho restaurado' : 'Pronto');
+
+      const launchPayload = await window.mdword.consumePendingDocument();
+      if (launchPayload && !launchPayload.canceled) {
+        applyDocument(launchPayload, launchPayload.status || 'Arquivo aberto');
+      }
     };
 
     bootstrap();
@@ -308,34 +340,32 @@ export default function App() {
   return (
     <div className="shell">
       <header className="window-header">
-        <div className="brand">
-          <div className="brand-badge">MD</div>
-          <div>
-            <strong>MDWord</strong>
-            <span>Editor visual para Markdown puro</span>
-          </div>
+        <div className="window-title">
+          <strong>MDWord</strong>
+          <span>Editor visual para Markdown puro</span>
         </div>
         <div className="document-meta">
-          <span>{filePath ? getTitleFromPath(filePath) : 'Sem titulo.md'}</span>
+          <strong>{filePath ? getTitleFromPath(filePath) : 'Sem titulo.md'}</strong>
+          <span>{filePath || 'Documento local ainda nao salvo'}</span>
           <span className={dirty ? 'dirty-badge visible' : 'dirty-badge'}>Nao salvo</span>
         </div>
       </header>
 
-      <nav className="ribbon">
+      <nav className="toolbar">
         <div className="ribbon-group file-group" aria-label="Arquivo">
-          <button className="ribbon-command large" onClick={handleNew} title="Novo documento">
+          <button className="ribbon-command" onClick={handleNew} title="Novo documento">
             <span className="command-icon">N</span>
             <span>Novo</span>
           </button>
-          <button className="ribbon-command large" onClick={handleOpen} title="Abrir Markdown">
+          <button className="ribbon-command" onClick={handleOpen} title="Abrir Markdown">
             <span className="command-icon">A</span>
             <span>Abrir</span>
           </button>
-          <button className="ribbon-command large" onClick={handleSave} title="Salvar">
+          <button className="ribbon-command" onClick={handleSave} title="Salvar">
             <span className="command-icon">S</span>
             <span>Salvar</span>
           </button>
-          <button className="ribbon-command large" onClick={handlePrint} title="Imprimir">
+          <button className="ribbon-command" onClick={handlePrint} title="Imprimir">
             <span className="command-icon">P</span>
             <span>Imprimir</span>
           </button>
@@ -404,47 +434,30 @@ export default function App() {
         </div>
       </nav>
 
+      <section className="document-strip">
+        <div className="document-summary">
+          <span className="summary-label">Perfil</span>
+          <strong>Markdown puro</strong>
+          <span className="summary-separator" />
+          <span className="summary-label">Auto save</span>
+          <strong>{lastSavedAt ? `ultimo save em ${lastSavedAt}` : 'ativo a cada 10 segundos'}</strong>
+        </div>
+
+        <div className="recent-strip">
+          <span className="summary-label">Recentes</span>
+          {recentPreview.length === 0 ? (
+            <span className="recent-empty">Nenhum arquivo recente</span>
+          ) : (
+            recentPreview.map((recentPath) => (
+              <button key={recentPath} className="recent-chip" onClick={() => handleOpenRecent(recentPath)} title={recentPath}>
+                {getTitleFromPath(recentPath)}
+              </button>
+            ))
+          )}
+        </div>
+      </section>
+
       <main className="workspace">
-        <aside className="side-panel">
-          <h1>Documento</h1>
-          <dl>
-            <div>
-              <dt>Arquivo</dt>
-              <dd>{filePath || 'Ainda nao salvo'}</dd>
-            </div>
-            <div>
-              <dt>Perfil</dt>
-              <dd>Markdown puro</dd>
-            </div>
-            <div>
-              <dt>Disponivel</dt>
-              <dd>titulos, listas, links, imagens, citacoes, codigo, negrito, italico e impressao</dd>
-            </div>
-            <div>
-              <dt>Oculto por perfil</dt>
-              <dd>tabelas, checklist, cabecalho de pagina, rodape e quebra manual</dd>
-            </div>
-            <div>
-              <dt>Auto save</dt>
-              <dd>{lastSavedAt ? `ultimo save em ${lastSavedAt}` : 'rascunho local ativo, save automatico a cada 10 segundos'}</dd>
-            </div>
-          </dl>
-
-          <h2>Recentes</h2>
-          <div className="recent-list">
-            {recentFiles.length === 0 ? (
-              <p>Nenhum arquivo recente ainda.</p>
-            ) : (
-              recentFiles.map((recentPath) => (
-                <button key={recentPath} className="recent-item" onClick={() => handleOpenRecent(recentPath)}>
-                  <strong>{getTitleFromPath(recentPath)}</strong>
-                  <span>{recentPath}</span>
-                </button>
-              ))
-            )}
-          </div>
-        </aside>
-
         <section className="editor-stage">
           <div className="editor-paper">
             <Editor
@@ -452,9 +465,10 @@ export default function App() {
               initialValue={initialText}
               previewStyle="vertical"
               initialEditType="wysiwyg"
+              height="auto"
               useCommandShortcut
-              hideModeSwitch={false}
-              toolbarItems={toolbarItems}
+              hideModeSwitch
+              toolbarItems={[]}
               autofocus={false}
               usageStatistics={false}
               onChange={() => {

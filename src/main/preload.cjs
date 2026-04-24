@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('mdword', {
   getAppState: () => ipcRenderer.invoke('app:get-state'),
+  consumePendingDocument: () => ipcRenderer.invoke('app:consume-pending-document'),
   openMarkdown: () => ipcRenderer.invoke('file:open-markdown'),
   saveMarkdown: (payload) => ipcRenderer.invoke('file:save-markdown', payload),
   saveMarkdownAs: (payload) => ipcRenderer.invoke('file:save-markdown-as', payload),

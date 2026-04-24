@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 2026-04-24
+
+1. Removida a toolbar interna duplicada do Toast UI Editor, mantendo apenas a ribbon do MDWord.
+2. Corrigido o layout do editor para nao forcar um painel branco fixo ocupando toda a altura restante da janela.
+3. Registrada validacao visual: o painel branco inutil sumiu e nao ha toolbar duplicada abaixo da faixa principal.
+4. Regenerado o instalador `release/MDWord-0.1.0-Setup.exe`.
+
+## 2026-04-22
+
+1. Corrigida a abertura de arquivos `.md` recebidos pela associacao do Windows ou por linha de comando.
+2. Adicionado controle de instancia unica para encaminhar arquivos abertos com o app ja em execucao.
+3. Adicionado buffer de documento inicial para evitar perda do conteudo quando o renderer ainda nao carregou o editor.
+4. Forcada a barra de menu nativa como visivel na janela principal.
+5. Corrigido o `base` do Vite para carregar JS e CSS por caminho relativo no app empacotado.
+6. Desativado o sandbox do Chromium no renderer para evitar falha `platform_channel` com `Acesso negado` no Windows.
+7. Alterado o controle de instancia unica para nao fechar o app quando o lock falhar com `Acesso negado`.
+8. Tornado o salvamento de recentes nao fatal quando `settings.json` estiver bloqueado ou sem permissao.
+9. Validado `npm run build`, `node --check` em `main.cjs` e `preload.cjs`.
+
 ## 2026-04-16
 
 1. Criada a base do aplicativo desktop MDWord em Electron, React e Vite.

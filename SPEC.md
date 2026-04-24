@@ -8,7 +8,7 @@ Objetivo principal: fornecer um editor visual desktop para arquivos Markdown pur
 
 Problema que resolve: editar Markdown como documento formatado, sem expor marcadores ao usuario no modo visual, mantendo o arquivo final em `.md`.
 
-Estado atual: base funcional em Electron com editor WYSIWYG, ribbon de ferramentas em perfil Markdown puro, abertura e salvamento de Markdown, impressao HTML, importacao de DOCX e PDF com OCR opcional, exportacao para DOCX via md2docx, exportacao para PDF, auto save, recentes, runtime OCR empacotado e empacotamento Windows validado.
+Estado atual: base funcional em Electron com editor WYSIWYG, ribbon de ferramentas em perfil Markdown puro, barra de menu nativa visivel, abertura e salvamento de Markdown, abertura de `.md` pela associacao do Windows, impressao HTML, importacao de DOCX e PDF com OCR opcional, exportacao para DOCX via md2docx, exportacao para PDF, auto save, recentes, runtime OCR empacotado e empacotamento Windows validado.
 
 ## 2. Escopo
 
@@ -49,6 +49,10 @@ Componentes principais:
 5. `src/renderer/App.jsx`, shell visual, ribbon e fluxo do editor.
 6. `src/renderer/styles.css`, identidade visual e faixa de ferramentas inspiradas no WordPad.
 
+Decisao de runtime Windows: o renderer roda com `contextIsolation: true`, `nodeIntegration: false` e `sandbox: false`, alem de `no-sandbox` no Chromium, para evitar falha `platform_channel` com `Acesso negado` observada no app empacotado.
+
+Controle de instancia: quando `requestSingleInstanceLock()` funciona, uma segunda abertura encaminha o arquivo para a janela ativa. Se o lock falhar com erro de permissao do Windows, o app continua abrindo uma janela nova para nao bloquear o usuario.
+
 Fluxo geral da aplicacao:
 
 1. O renderer edita o conteudo em modo visual.
@@ -56,12 +60,15 @@ Fluxo geral da aplicacao:
 3. O processo principal executa abrir, salvar, imprimir e converter.
 4. Impressao e exportacoes usam o Markdown como fonte unica.
 5. O menu nativo pode abrir Markdown diretamente e enviar o documento carregado ao renderer por IPC.
+6. Arquivos recebidos pela associacao do Windows ou por linha de comando sao lidos no processo principal e entregues ao renderer quando o editor estiver pronto.
 
 ## 4. Dependencias e ambiente
 
 Linguagens e frameworks: JavaScript, React, Electron.
 
 Ferramentas de build: Vite, electron-builder.
+
+Observacao de empacotamento: `vite.config.mjs` deve manter `base: './'` para que o `index.html` carregue JS e CSS por caminhos relativos dentro de `app.asar`.
 
 Dependencias externas relevantes:
 
@@ -127,6 +134,7 @@ Decisoes arquiteturais importantes:
 5. O app empacotado deve preferir o runtime OCR embarcado, sem depender de Python no destino.
 6. A exportacao DOCX deve preferir o runtime `md2docx.exe` empacotado, pois ele preserva mais recursos de Markdown do que a conversao HTML intermediaria.
 7. A ribbon deve priorizar comandos que cabem no perfil Markdown puro: arquivo, negrito, italico, codigo, titulos, listas, citacao, linha, bloco de codigo, link, imagem por URL e conversoes.
+8. A toolbar interna do Toast UI deve permanecer oculta para nao duplicar comandos da ribbon nem criar faixa vazia no editor.
 
 Convencoes relevantes:
 
@@ -149,12 +157,13 @@ O que ja esta pronto:
 
 1. Estrutura do aplicativo.
 2. Shell visual estilo WordPad.
-3. Editor WYSIWYG com toolbar filtrada e ribbon superior estilo WordPad.
+3. Editor WYSIWYG com ribbon superior estilo WordPad e toolbar interna do Toast UI oculta.
 4. Abrir, salvar, salvar como, importar DOCX, importar PDF, importar PDF com OCR, exportar DOCX, exportar PDF e imprimir.
 5. Auto save em arquivo salvo e rascunho local para recuperacao.
 6. Lista de arquivos recentes.
 7. Runtime OCR empacotado com helper executavel e Tesseract minimo.
 8. Runtime md2docx empacotado para exportacao DOCX.
+9. Painel branco inutil abaixo do conteudo removido e validado visualmente em 24/04/2026.
 
 O que esta em andamento:
 
@@ -179,7 +188,7 @@ Entregas pendentes:
 
 1. Melhorar a heuristica de paragrafos e listas em PDF convertido por OCR.
 2. Menu nativo de recentes.
-3. Validacao da associacao de arquivo `.md` apos instalacao.
+3. Validacao da associacao de arquivo `.md` apos instalacao em maquina limpa.
 
 Melhorias futuras:
 
@@ -200,6 +209,8 @@ Criterios de aceite atuais:
 7. Exportar para `.pdf`.
 8. Imprimir com formatacao renderizada.
 9. Restaurar rascunho local e executar auto save quando houver caminho salvo.
+10. Abrir um `.md` selecionado no Windows com o MDWord e carregar seu conteudo no editor.
+11. Exibir a barra de menu nativa com `Arquivo`, `Editar` e `Exibir`.
 
 Como validar manualmente:
 
@@ -209,6 +220,8 @@ Como validar manualmente:
 4. Exportar DOCX e abrir no Word.
 5. Importar DOCX, PDF textual e PDF com OCR.
 6. Imprimir ou abrir a janela de impressao.
+7. Abrir um `.md` pelo Explorer usando o MDWord.
+8. Confirmar que a barra de menu nativa aparece na janela principal.
 
 Testes minimos esperados:
 

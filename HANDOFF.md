@@ -18,6 +18,12 @@ Entregas concluidas:
 10. Auto save e recentes.
 11. Instalador Windows.
 12. Atalho local criado na area de trabalho desta maquina.
+13. Abertura de `.md` recebido pela associacao do Windows ou por linha de comando.
+14. Controle de instancia unica encaminhando arquivos abertos para a janela ja ativa.
+15. Barra de menu nativa forçada como visivel na janela principal.
+16. Toolbar interna duplicada do Toast UI removida da tela principal.
+17. Layout do editor ajustado para evitar painel branco fixo quando o documento nao ocupa a altura da janela.
+18. Validacao visual registrada em 24/04/2026: o painel branco inutil sumiu e a tela principal ficou sem toolbar duplicada.
 
 ## Artefatos principais
 
@@ -33,6 +39,9 @@ Entregas concluidas:
 3. Testar roundtrip real com arquivos DOCX e PDF do usuario.
 4. Medir se o OCR embarcado atende PDFs escaneados reais em portugues.
 5. Testar `Salvar como DOCX` no aplicativo instalado, verificando capa, sumario, rodape, titulos, listas e links gerados pelo md2docx.
+6. Confirmar que duplo clique ou `Abrir com` em `.md` carrega o arquivo selecionado.
+7. Confirmar que a barra de menu nativa aparece como `Arquivo`, `Editar` e `Exibir`.
+8. Em nova instalacao, reconfirmar visualmente que nao ha toolbar duplicada nem painel branco fixo abaixo do conteudo.
 
 ## Melhor proxima entrega
 
