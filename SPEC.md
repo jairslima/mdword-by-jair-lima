@@ -8,7 +8,7 @@ Objetivo principal: fornecer um editor visual desktop para arquivos Markdown pur
 
 Problema que resolve: editar Markdown como documento formatado, sem expor marcadores ao usuario no modo visual, mantendo o arquivo final em `.md`.
 
-Estado atual: base funcional em Electron com editor WYSIWYG, ribbon de ferramentas em perfil Markdown puro, barra de menu nativa visivel, abertura e salvamento de Markdown, abertura de `.md` pela associacao do Windows, impressao HTML, importacao de DOCX e PDF com OCR opcional, exportacao para DOCX via md2docx, exportacao para PDF, auto save, recentes, runtime OCR empacotado e empacotamento Windows validado.
+Estado atual: base funcional em Electron com editor WYSIWYG, ribbon de ferramentas em perfil Markdown puro, barra de menu nativa visivel, abertura e salvamento de Markdown, abertura de `.md` pela associacao do Windows, impressao HTML, importacao de DOCX e PDF com OCR opcional, exportacao para DOCX via md2docx, exportacao para PDF, auto save em arquivo salvo, recentes, comando de fechar documento, inicializacao em documento vazio, runtime OCR empacotado e empacotamento Windows validado.
 
 ## 2. Escopo
 
@@ -135,6 +135,7 @@ Decisoes arquiteturais importantes:
 6. A exportacao DOCX deve preferir o runtime `md2docx.exe` empacotado, pois ele preserva mais recursos de Markdown do que a conversao HTML intermediaria.
 7. A ribbon deve priorizar comandos que cabem no perfil Markdown puro: arquivo, negrito, italico, codigo, titulos, listas, citacao, linha, bloco de codigo, link, imagem por URL e conversoes.
 8. A toolbar interna do Toast UI deve permanecer oculta para nao duplicar comandos da ribbon nem criar faixa vazia no editor.
+9. Atalhos de arquivo e formatacao devem funcionar pelo menu nativo e por fallback no renderer quando o foco estiver dentro do editor.
 
 Convencoes relevantes:
 
@@ -159,7 +160,7 @@ O que ja esta pronto:
 2. Shell visual estilo WordPad.
 3. Editor WYSIWYG com ribbon superior estilo WordPad e toolbar interna do Toast UI oculta.
 4. Abrir, salvar, salvar como, importar DOCX, importar PDF, importar PDF com OCR, exportar DOCX, exportar PDF e imprimir.
-5. Auto save em arquivo salvo e rascunho local para recuperacao.
+5. Auto save em arquivo salvo, lista de recentes, inicializacao em documento vazio, atalhos revisados e fechamento do documento atual sem encerrar o app.
 6. Lista de arquivos recentes.
 7. Runtime OCR empacotado com helper executavel e Tesseract minimo.
 8. Runtime md2docx empacotado para exportacao DOCX.
@@ -208,9 +209,11 @@ Criterios de aceite atuais:
 6. Exportar para `.docx`.
 7. Exportar para `.pdf`.
 8. Imprimir com formatacao renderizada.
-9. Restaurar rascunho local e executar auto save quando houver caminho salvo.
+9. Iniciar em documento vazio, sem restaurar automaticamente o ultimo arquivo aberto.
 10. Abrir um `.md` selecionado no Windows com o MDWord e carregar seu conteudo no editor.
 11. Exibir a barra de menu nativa com `Arquivo`, `Editar` e `Exibir`.
+12. Fechar o documento atual e voltar para um documento vazio sem encerrar o aplicativo.
+13. Executar atalhos principais como `Ctrl+N`, `Ctrl+S`, `Ctrl+B`, `Ctrl+I`, `Ctrl+K`, listas e titulos com foco no editor.
 
 Como validar manualmente:
 

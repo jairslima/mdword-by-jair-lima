@@ -102,11 +102,12 @@ function buildMenu() {
     {
       label: 'Arquivo',
       submenu: [
-        { label: 'Novo', click: () => sendMenuAction('new') },
-        { label: 'Abrir Markdown', click: () => openMarkdownFromMenu() },
+        { label: 'Novo', accelerator: 'CmdOrCtrl+N', click: () => sendMenuAction('new') },
+        { label: 'Fechar documento', accelerator: 'CmdOrCtrl+W', click: () => sendMenuAction('closeDocument') },
+        { label: 'Abrir Markdown', accelerator: 'CmdOrCtrl+O', click: () => sendMenuAction('open') },
         { type: 'separator' },
-        { label: 'Salvar', click: () => sendMenuAction('save') },
-        { label: 'Salvar como', click: () => sendMenuAction('saveAs') },
+        { label: 'Salvar', accelerator: 'CmdOrCtrl+S', click: () => sendMenuAction('save') },
+        { label: 'Salvar como', accelerator: 'CmdOrCtrl+Shift+S', click: () => sendMenuAction('saveAs') },
         { type: 'separator' },
         { label: 'Importar DOCX', click: () => sendMenuAction('importDocx') },
         { label: 'Importar PDF', click: () => sendMenuAction('importPdf') },
@@ -114,7 +115,7 @@ function buildMenu() {
         { label: 'Exportar DOCX', click: () => sendMenuAction('exportDocx') },
         { label: 'Exportar PDF', click: () => sendMenuAction('exportPdf') },
         { type: 'separator' },
-        { label: 'Imprimir', click: () => sendMenuAction('print') },
+        { label: 'Imprimir', accelerator: 'CmdOrCtrl+P', click: () => sendMenuAction('print') },
         { type: 'separator' },
         { role: 'quit', label: 'Sair' }
       ]
@@ -129,6 +130,27 @@ function buildMenu() {
         { role: 'copy', label: 'Copiar' },
         { role: 'paste', label: 'Colar' },
         { role: 'selectAll', label: 'Selecionar tudo' }
+      ]
+    },
+    {
+      label: 'Formatar',
+      submenu: [
+        { label: 'Negrito', accelerator: 'CmdOrCtrl+B', click: () => sendMenuAction('bold') },
+        { label: 'Italico', accelerator: 'CmdOrCtrl+I', click: () => sendMenuAction('italic') },
+        { label: 'Codigo', click: () => sendMenuAction('code') },
+        { type: 'separator' },
+        { label: 'Titulo 1', accelerator: 'CmdOrCtrl+Alt+1', click: () => sendMenuAction('heading1') },
+        { label: 'Titulo 2', accelerator: 'CmdOrCtrl+Alt+2', click: () => sendMenuAction('heading2') },
+        { label: 'Titulo 3', accelerator: 'CmdOrCtrl+Alt+3', click: () => sendMenuAction('heading3') },
+        { type: 'separator' },
+        { label: 'Lista com marcadores', accelerator: 'CmdOrCtrl+Shift+8', click: () => sendMenuAction('bulletList') },
+        { label: 'Lista numerada', accelerator: 'CmdOrCtrl+Shift+7', click: () => sendMenuAction('orderedList') },
+        { label: 'Citacao', accelerator: 'CmdOrCtrl+Shift+9', click: () => sendMenuAction('blockQuote') },
+        { label: 'Linha horizontal', accelerator: 'CmdOrCtrl+Shift+H', click: () => sendMenuAction('hr') },
+        { label: 'Bloco de codigo', accelerator: 'CmdOrCtrl+Alt+C', click: () => sendMenuAction('codeBlock') },
+        { type: 'separator' },
+        { label: 'Link', accelerator: 'CmdOrCtrl+K', click: () => sendMenuAction('link') },
+        { label: 'Imagem', accelerator: 'CmdOrCtrl+Alt+I', click: () => sendMenuAction('image') }
       ]
     },
     {

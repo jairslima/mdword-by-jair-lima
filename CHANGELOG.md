@@ -5,7 +5,10 @@
 1. Removida a toolbar interna duplicada do Toast UI Editor, mantendo apenas a ribbon do MDWord.
 2. Corrigido o layout do editor para nao forcar um painel branco fixo ocupando toda a altura restante da janela.
 3. Registrada validacao visual: o painel branco inutil sumiu e nao ha toolbar duplicada abaixo da faixa principal.
-4. Regenerado o instalador `release/MDWord-0.1.0-Setup.exe`.
+4. Corrigida a inicializacao para abrir em documento vazio, sem restaurar automaticamente o ultimo arquivo aberto.
+5. Adicionado comando `Fechar documento` na ribbon e no menu nativo.
+6. Revisados atalhos de arquivo e formatacao com aceleradores no menu nativo e fallback no renderer.
+7. Regenerado o instalador `release/MDWord-0.1.0-Setup.exe`.
 
 ## 2026-04-22
 

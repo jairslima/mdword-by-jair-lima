@@ -8,11 +8,7 @@ const headingOptions = [
   { label: 'Titulo 3', value: 'heading3' }
 ];
 
-const initialText = `# MDWord
-
-Abra um arquivo Markdown ou comece a escrever aqui.
-
-Este editor trabalha em perfil Markdown puro.`;
+const initialText = '';
 
 function getTitleFromPath(filePath) {
   if (!filePath) {
@@ -28,11 +24,14 @@ export default function App() {
   const autosaveTimerRef = useRef(null);
   const pendingMarkdownRef = useRef(null);
   const editorReadyTimerRef = useRef(null);
+  const programmaticChangeRef = useRef(false);
+  const lastShortcutActionRef = useRef({ name: '', at: 0 });
   const [filePath, setFilePath] = useState('');
   const [status, setStatus] = useState('Pronto');
   const [dirty, setDirty] = useState(false);
   const [recentFiles, setRecentFiles] = useState([]);
   const [lastSavedAt, setLastSavedAt] = useState('');
+  const [editorKey, setEditorKey] = useState(0);
   const recentPreview = recentFiles.slice(0, 3);
 
   const refreshAppState = async () => {
@@ -54,13 +53,28 @@ export default function App() {
     editor.focus();
   };
 
+  const runShortcutAction = (name, action) => {
+    const now = Date.now();
+    const lastAction = lastShortcutActionRef.current;
+    if (lastAction.name === name && now - lastAction.at < 150) {
+      return;
+    }
+
+    lastShortcutActionRef.current = { name, at: now };
+    action();
+  };
+
   const handleHeading = (event) => {
     const value = event.target.value;
     if (!value) {
       return;
     }
 
-    runEditorCommand('heading', { level: Number(value.replace('heading', '')) });
+    applyHeading(Number(value.replace('heading', '')));
+  };
+
+  const applyHeading = (level) => {
+    runEditorCommand('heading', { level });
   };
 
   const handleLink = () => {
@@ -90,8 +104,12 @@ export default function App() {
       return;
     }
 
+    programmaticChangeRef.current = true;
     editor.setMarkdown(markdown ?? '', false);
     pendingMarkdownRef.current = null;
+    window.setTimeout(() => {
+      programmaticChangeRef.current = false;
+    }, 0);
   };
 
   const flushPendingMarkdown = () => {
@@ -110,6 +128,18 @@ export default function App() {
     return window.confirm('Existem alteracoes nao salvas. Deseja continuar e descartar essas alteracoes?');
   };
 
+  const resetDocument = (nextStatus) => {
+    pendingMarkdownRef.current = initialText;
+    setMarkdown(initialText);
+    setEditorKey((currentKey) => currentKey + 1);
+    setFilePath('');
+    setDirty(false);
+    setLastSavedAt('');
+    setStatus(nextStatus);
+    window.localStorage.removeItem('mdword-draft');
+    window.localStorage.removeItem('mdword-last-path');
+  };
+
   const applyDocument = (payload, nextStatus) => {
     if (!payload || payload.canceled) {
       return;
@@ -120,8 +150,6 @@ export default function App() {
     setDirty(false);
     setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
     setStatus(nextStatus);
-    window.localStorage.setItem('mdword-draft', payload.markdown ?? '');
-    window.localStorage.setItem('mdword-last-path', payload.filePath || payload.sourcePath || '');
     refreshAppState();
   };
 
@@ -130,13 +158,15 @@ export default function App() {
       return;
     }
 
-    setMarkdown(initialText);
-    setFilePath('');
-    setDirty(false);
-    setLastSavedAt('');
-    setStatus('Novo documento criado');
-    window.localStorage.setItem('mdword-draft', initialText);
-    window.localStorage.removeItem('mdword-last-path');
+    resetDocument('Novo documento criado');
+  };
+
+  const handleCloseDocument = () => {
+    if (!confirmDiscard()) {
+      return;
+    }
+
+    resetDocument('Documento fechado');
   };
 
   const handleOpen = async () => {
@@ -241,6 +271,84 @@ export default function App() {
     applyDocument(payload, payload?.sourcePath || payload?.filePath ? `Arquivo aberto: ${getTitleFromPath(payload.sourcePath || payload.filePath)}` : status);
   };
 
+  const handleShortcut = (event) => {
+    if (!(event.ctrlKey || event.metaKey)) {
+      return;
+    }
+
+    const key = event.key.toLowerCase();
+    const code = event.code;
+    const plainShortcut = !event.shiftKey && !event.altKey;
+    const shiftShortcut = event.shiftKey && !event.altKey;
+    const altShortcut = event.altKey && !event.shiftKey;
+
+    const runShortcut = (name, action) => {
+      event.preventDefault();
+      event.stopPropagation();
+      runShortcutAction(name, action);
+    };
+
+    if (plainShortcut) {
+      const actions = {
+        b: { name: 'bold', run: () => runEditorCommand('bold') },
+        i: { name: 'italic', run: () => runEditorCommand('italic') },
+        k: { name: 'link', run: handleLink },
+        n: { name: 'new', run: handleNew },
+        o: { name: 'open', run: handleOpen },
+        p: { name: 'print', run: handlePrint },
+        s: { name: 'save', run: handleSave },
+        w: { name: 'closeDocument', run: handleCloseDocument },
+        '`': { name: 'code', run: () => runEditorCommand('code') }
+      };
+
+      if (actions[key]) {
+        runShortcut(actions[key].name, actions[key].run);
+      }
+      return;
+    }
+
+    if (shiftShortcut) {
+      if (key === 's') {
+        runShortcut('saveAs', handleSaveAs);
+        return;
+      }
+
+      if (code === 'Digit7') {
+        runShortcut('orderedList', () => runEditorCommand('orderedList'));
+        return;
+      }
+
+      if (code === 'Digit8') {
+        runShortcut('bulletList', () => runEditorCommand('bulletList'));
+        return;
+      }
+
+      if (code === 'Digit9') {
+        runShortcut('blockQuote', () => runEditorCommand('blockQuote'));
+        return;
+      }
+
+      if (key === 'h') {
+        runShortcut('hr', () => runEditorCommand('hr'));
+      }
+      return;
+    }
+
+    if (altShortcut) {
+      const actions = {
+        '1': { name: 'heading1', run: () => applyHeading(1) },
+        '2': { name: 'heading2', run: () => applyHeading(2) },
+        '3': { name: 'heading3', run: () => applyHeading(3) },
+        c: { name: 'codeBlock', run: () => runEditorCommand('codeBlock') },
+        i: { name: 'image', run: handleImage }
+      };
+
+      if (actions[key]) {
+        runShortcut(actions[key].name, actions[key].run);
+      }
+    }
+  };
+
   useEffect(() => {
     flushPendingMarkdown();
   });
@@ -267,11 +375,9 @@ export default function App() {
     const bootstrap = async () => {
       const state = await window.mdword.getAppState();
       setRecentFiles(state?.recentFiles || []);
-      const draft = window.localStorage.getItem('mdword-draft');
-      const lastPath = window.localStorage.getItem('mdword-last-path') || '';
-      setMarkdown(draft || initialText);
-      setFilePath(lastPath);
-      setStatus(draft ? 'Rascunho restaurado' : 'Pronto');
+      window.localStorage.removeItem('mdword-draft');
+      window.localStorage.removeItem('mdword-last-path');
+      resetDocument('Pronto');
 
       const launchPayload = await window.mdword.consumePendingDocument();
       if (launchPayload && !launchPayload.canceled) {
@@ -289,8 +395,6 @@ export default function App() {
 
     autosaveTimerRef.current = window.setInterval(async () => {
       const markdown = getMarkdown();
-      window.localStorage.setItem('mdword-draft', markdown);
-      window.localStorage.setItem('mdword-last-path', filePath || '');
 
       if (dirty && filePath) {
         const payload = await window.mdword.saveMarkdown({ filePath, markdown });
@@ -317,9 +421,23 @@ export default function App() {
     const unsubscribe = window.mdword.onMenuAction((action) => {
       const actions = {
         new: handleNew,
+        closeDocument: handleCloseDocument,
         open: handleOpen,
         save: handleSave,
         saveAs: handleSaveAs,
+        bold: () => runEditorCommand('bold'),
+        italic: () => runEditorCommand('italic'),
+        code: () => runEditorCommand('code'),
+        heading1: () => applyHeading(1),
+        heading2: () => applyHeading(2),
+        heading3: () => applyHeading(3),
+        bulletList: () => runEditorCommand('bulletList'),
+        orderedList: () => runEditorCommand('orderedList'),
+        blockQuote: () => runEditorCommand('blockQuote'),
+        hr: () => runEditorCommand('hr'),
+        codeBlock: () => runEditorCommand('codeBlock'),
+        link: handleLink,
+        image: handleImage,
         importDocx: handleImportDocx,
         importPdf: handleImportPdf,
         importPdfOcr: handleImportPdfOcr,
@@ -328,14 +446,23 @@ export default function App() {
         print: handlePrint
       };
 
-      actions[action]?.();
+      if (actions[action]) {
+        runShortcutAction(action, actions[action]);
+      }
     });
 
     return () => {
       unsubscribePayload();
       unsubscribe();
     };
-  }, [filePath, dirty]);
+  }, [filePath, dirty, status]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleShortcut, true);
+    return () => {
+      window.removeEventListener('keydown', handleShortcut, true);
+    };
+  }, [filePath, dirty, status]);
 
   return (
     <div className="shell">
@@ -353,19 +480,23 @@ export default function App() {
 
       <nav className="toolbar">
         <div className="ribbon-group file-group" aria-label="Arquivo">
-          <button className="ribbon-command" onClick={handleNew} title="Novo documento">
+          <button className="ribbon-command" onClick={handleNew} title="Novo documento (Ctrl+N)">
             <span className="command-icon">N</span>
             <span>Novo</span>
           </button>
-          <button className="ribbon-command" onClick={handleOpen} title="Abrir Markdown">
+          <button className="ribbon-command" onClick={handleOpen} title="Abrir Markdown (Ctrl+O)">
             <span className="command-icon">A</span>
             <span>Abrir</span>
           </button>
-          <button className="ribbon-command" onClick={handleSave} title="Salvar">
+          <button className="ribbon-command" onClick={handleCloseDocument} title="Fechar documento (Ctrl+W)">
+            <span className="command-icon">F</span>
+            <span>Fechar</span>
+          </button>
+          <button className="ribbon-command" onClick={handleSave} title="Salvar (Ctrl+S)">
             <span className="command-icon">S</span>
             <span>Salvar</span>
           </button>
-          <button className="ribbon-command" onClick={handlePrint} title="Imprimir">
+          <button className="ribbon-command" onClick={handlePrint} title="Imprimir (Ctrl+P)">
             <span className="command-icon">P</span>
             <span>Imprimir</span>
           </button>
@@ -381,32 +512,32 @@ export default function App() {
             ))}
           </select>
           <div className="command-row">
-            <button className="icon-command strong" onClick={() => runEditorCommand('bold')} title="Negrito">B</button>
-            <button className="icon-command italic" onClick={() => runEditorCommand('italic')} title="Italico">I</button>
-            <button className="icon-command code-mark" onClick={() => runEditorCommand('code')} title="Codigo">{"<>"}</button>
+            <button className="icon-command strong" onClick={() => runEditorCommand('bold')} title="Negrito (Ctrl+B)">B</button>
+            <button className="icon-command italic" onClick={() => runEditorCommand('italic')} title="Italico (Ctrl+I)">I</button>
+            <button className="icon-command code-mark" onClick={() => runEditorCommand('code')} title="Codigo (Ctrl+`)">{"<>"}</button>
           </div>
           <span className="ribbon-label">Fonte</span>
         </div>
 
         <div className="ribbon-group paragraph-group" aria-label="Paragrafo">
           <div className="command-row">
-            <button className="icon-command" onClick={() => runEditorCommand('bulletList')} title="Lista com marcadores">Lista</button>
-            <button className="icon-command" onClick={() => runEditorCommand('orderedList')} title="Lista numerada">1.</button>
-            <button className="icon-command" onClick={() => runEditorCommand('blockQuote')} title="Citacao">"</button>
+            <button className="icon-command" onClick={() => runEditorCommand('bulletList')} title="Lista com marcadores (Ctrl+Shift+8)">Lista</button>
+            <button className="icon-command" onClick={() => runEditorCommand('orderedList')} title="Lista numerada (Ctrl+Shift+7)">1.</button>
+            <button className="icon-command" onClick={() => runEditorCommand('blockQuote')} title="Citacao (Ctrl+Shift+9)">"</button>
           </div>
           <div className="command-row">
-            <button className="icon-command" onClick={() => runEditorCommand('hr')} title="Linha horizontal">Linha</button>
-            <button className="icon-command" onClick={() => runEditorCommand('codeBlock')} title="Bloco de codigo">Bloco</button>
+            <button className="icon-command" onClick={() => runEditorCommand('hr')} title="Linha horizontal (Ctrl+Shift+H)">Linha</button>
+            <button className="icon-command" onClick={() => runEditorCommand('codeBlock')} title="Bloco de codigo (Ctrl+Alt+C)">Bloco</button>
           </div>
           <span className="ribbon-label">Paragrafo</span>
         </div>
 
         <div className="ribbon-group insert-group" aria-label="Inserir">
-          <button className="ribbon-command" onClick={handleLink} title="Inserir link">
+          <button className="ribbon-command" onClick={handleLink} title="Inserir link (Ctrl+K)">
             <span className="command-icon">L</span>
             <span>Link</span>
           </button>
-          <button className="ribbon-command" onClick={handleImage} title="Inserir imagem por URL">
+          <button className="ribbon-command" onClick={handleImage} title="Inserir imagem por URL (Ctrl+Alt+I)">
             <span className="command-icon">IMG</span>
             <span>Imagem</span>
           </button>
@@ -461,6 +592,7 @@ export default function App() {
         <section className="editor-stage">
           <div className="editor-paper">
             <Editor
+              key={editorKey}
               ref={editorRef}
               initialValue={initialText}
               previewStyle="vertical"
@@ -472,6 +604,10 @@ export default function App() {
               autofocus={false}
               usageStatistics={false}
               onChange={() => {
+                if (programmaticChangeRef.current) {
+                  return;
+                }
+
                 setDirty(true);
                 setStatus('Editando...');
               }}
