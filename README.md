@@ -14,6 +14,9 @@ MDWord e um editor desktop de Markdown puro com visual inspirado no WordPad.
 8. Leva o runtime de OCR dentro do instalador, sem exigir Python no computador de destino.
 9. Coloca o foco no editor ao abrir, para permitir colar texto imediatamente.
 10. Protege alteracoes nao salvas ao fechar, abrir outro arquivo, importar, criar novo ou trocar de documento.
+11. Mostra arquivos recentes tambem no menu nativo `Arquivo > Recentes`.
+12. Indica alteracoes pendentes no titulo da janela com `*`.
+13. Mantem rascunho temporario para documento novo ainda nao salvo e oferece recuperacao ao reabrir.
 
 ## Perfil do editor
 
@@ -40,6 +43,7 @@ Isso significa que a interface so exibe comandos que podem ser representados sem
 ```powershell
 npm install
 npm run dev
+npm test
 npm run build
 npm run build:ocr
 npm run dist

@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Editor } from '@toast-ui/react-editor';
+import {
+  buildWindowTitle,
+  hasRecoverableDraft,
+  normalizeMenuAction,
+  shouldSaveDraft
+} from '../shared/documentLifecycle.js';
 
 const headingOptions = [
   { label: 'Estilo', value: '' },
@@ -9,6 +15,9 @@ const headingOptions = [
 ];
 
 const initialText = '';
+const draftKey = 'mdword-draft';
+const draftUpdatedAtKey = 'mdword-draft-updated-at';
+const lastPathKey = 'mdword-last-path';
 
 function getTitleFromPath(filePath) {
   if (!filePath) {
@@ -34,6 +43,12 @@ export default function App() {
   const [lastSavedAt, setLastSavedAt] = useState('');
   const [editorKey, setEditorKey] = useState(0);
   const recentPreview = recentFiles.slice(0, 3);
+
+  const clearDraft = () => {
+    window.localStorage.removeItem(draftKey);
+    window.localStorage.removeItem(draftUpdatedAtKey);
+    window.localStorage.removeItem(lastPathKey);
+  };
 
   const refreshAppState = async () => {
     const state = await window.mdword.getAppState();
@@ -152,7 +167,8 @@ export default function App() {
     return false;
   };
 
-  const resetDocument = (nextStatus) => {
+  const resetDocument = (nextStatus, options = {}) => {
+    const { clearStoredDraft = true } = options;
     pendingMarkdownRef.current = initialText;
     setMarkdown(initialText);
     setEditorKey((currentKey) => currentKey + 1);
@@ -160,8 +176,9 @@ export default function App() {
     setDirty(false);
     setLastSavedAt('');
     setStatus(nextStatus);
-    window.localStorage.removeItem('mdword-draft');
-    window.localStorage.removeItem('mdword-last-path');
+    if (clearStoredDraft) {
+      clearDraft();
+    }
     focusEditorSoon(120);
   };
 
@@ -175,6 +192,7 @@ export default function App() {
     setDirty(false);
     setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
     setStatus(nextStatus);
+    clearDraft();
     refreshAppState();
     focusEditorSoon(80);
   };
@@ -307,6 +325,12 @@ export default function App() {
     applyDocument(payload, payload?.sourcePath || payload?.filePath ? `Arquivo aberto: ${getTitleFromPath(payload.sourcePath || payload.filePath)}` : status);
   };
 
+  const handleQuit = async () => {
+    if (await confirmUnsavedChanges()) {
+      await window.mdword.confirmWindowClose();
+    }
+  };
+
   const handleShortcut = (event) => {
     if (!(event.ctrlKey || event.metaKey)) {
       return;
@@ -332,6 +356,7 @@ export default function App() {
         n: { name: 'new', run: handleNew },
         o: { name: 'open', run: handleOpen },
         p: { name: 'print', run: handlePrint },
+        q: { name: 'quit', run: handleQuit },
         s: { name: 'save', run: handleSave },
         w: { name: 'closeDocument', run: handleCloseDocument },
         '`': { name: 'code', run: () => runEditorCommand('code') }
@@ -412,18 +437,58 @@ export default function App() {
     const bootstrap = async () => {
       const state = await window.mdword.getAppState();
       setRecentFiles(state?.recentFiles || []);
-      window.localStorage.removeItem('mdword-draft');
-      window.localStorage.removeItem('mdword-last-path');
-      resetDocument('Pronto');
 
       const launchPayload = await window.mdword.consumePendingDocument();
       if (launchPayload && !launchPayload.canceled) {
         applyDocument(launchPayload, launchPayload.status || 'Arquivo aberto');
+        return;
       }
+
+      const draft = window.localStorage.getItem(draftKey);
+      const draftUpdatedAt = window.localStorage.getItem(draftUpdatedAtKey);
+      if (hasRecoverableDraft(draft)) {
+        const recoveryChoice = await window.mdword.confirmDraftRecovery({
+          updatedAt: draftUpdatedAt
+        });
+
+        if (recoveryChoice === 'restore') {
+          pendingMarkdownRef.current = draft;
+          setMarkdown(draft);
+          setFilePath('');
+          setDirty(true);
+          setLastSavedAt('');
+          setStatus('Rascunho restaurado');
+          focusEditorSoon(120);
+          return;
+        }
+
+        clearDraft();
+      }
+
+      resetDocument('Pronto', { clearStoredDraft: false });
     };
 
     bootstrap();
   }, []);
+
+  useEffect(() => {
+    if (shouldSaveDraft({ dirty, filePath })) {
+      const markdown = getMarkdown() || pendingMarkdownRef.current || '';
+      window.localStorage.setItem(draftKey, markdown);
+      window.localStorage.setItem(draftUpdatedAtKey, new Date().toLocaleString('pt-BR'));
+      return;
+    }
+
+    if (!dirty || filePath) {
+      clearDraft();
+    }
+  }, [dirty, filePath]);
+
+  useEffect(() => {
+    const title = buildWindowTitle({ dirty, filePath });
+    document.title = title;
+    window.mdword.setWindowTitle(title);
+  }, [dirty, filePath]);
 
   useEffect(() => {
     if (autosaveTimerRef.current) {
@@ -477,6 +542,8 @@ export default function App() {
     });
 
     const unsubscribe = window.mdword.onMenuAction((action) => {
+      const menuAction = normalizeMenuAction(action);
+      const actionName = menuAction.type;
       const actions = {
         new: handleNew,
         closeDocument: handleCloseDocument,
@@ -504,15 +571,25 @@ export default function App() {
         print: handlePrint
       };
 
-      if (actions[action]) {
-        runShortcutAction(action, actions[action]);
+      if (actionName === 'openRecent' && menuAction.filePath) {
+        runShortcutAction(`${actionName}:${menuAction.filePath}`, () => handleOpenRecent(menuAction.filePath));
+        return;
       }
+
+      if (actions[actionName]) {
+        runShortcutAction(actionName, actions[actionName]);
+      }
+    });
+
+    const unsubscribeAppState = window.mdword.onAppStateUpdated((state) => {
+      setRecentFiles(state?.recentFiles || []);
     });
 
     return () => {
       unsubscribePayload();
       unsubscribeCloseRequest();
       unsubscribe();
+      unsubscribeAppState();
     };
   }, [filePath, dirty, status]);
 
@@ -669,6 +746,10 @@ export default function App() {
 
                 setDirty(true);
                 setStatus('Editando...');
+                if (shouldSaveDraft({ dirty: true, filePath })) {
+                  window.localStorage.setItem(draftKey, getMarkdown());
+                  window.localStorage.setItem(draftUpdatedAtKey, new Date().toLocaleString('pt-BR'));
+                }
               }}
             />
           </div>

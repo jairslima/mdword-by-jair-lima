@@ -4,7 +4,9 @@ contextBridge.exposeInMainWorld('mdword', {
   getAppState: () => ipcRenderer.invoke('app:get-state'),
   consumePendingDocument: () => ipcRenderer.invoke('app:consume-pending-document'),
   confirmUnsaved: (payload) => ipcRenderer.invoke('app:confirm-unsaved', payload),
+  confirmDraftRecovery: (payload) => ipcRenderer.invoke('app:confirm-draft-recovery', payload),
   confirmWindowClose: () => ipcRenderer.invoke('app:confirm-window-close'),
+  setWindowTitle: (title) => ipcRenderer.invoke('app:set-window-title', title),
   openMarkdown: () => ipcRenderer.invoke('file:open-markdown'),
   saveMarkdown: (payload) => ipcRenderer.invoke('file:save-markdown', payload),
   saveMarkdownAs: (payload) => ipcRenderer.invoke('file:save-markdown-as', payload),
@@ -29,5 +31,10 @@ contextBridge.exposeInMainWorld('mdword', {
     const wrapped = () => listener();
     ipcRenderer.on('app:request-close', wrapped);
     return () => ipcRenderer.removeListener('app:request-close', wrapped);
+  },
+  onAppStateUpdated: (listener) => {
+    const wrapped = (_event, state) => listener(state);
+    ipcRenderer.on('app:state-updated', wrapped);
+    return () => ipcRenderer.removeListener('app:state-updated', wrapped);
   }
 });

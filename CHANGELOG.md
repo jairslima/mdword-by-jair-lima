@@ -6,8 +6,12 @@
 2. Substituida a confirmacao simples de descarte por um fluxo com `Salvar`, `Descartar` e `Cancelar`.
 3. Protegidas alteracoes pendentes ao fechar a janela, criar novo documento, fechar documento, abrir arquivo, abrir recente, importar DOCX, importar PDF e receber arquivo por associacao do Windows.
 4. Ajustado o texto de auto save para informar que documento novo precisa ser salvo antes de ativar auto save.
-5. Atualizados `README.md`, `SPEC.md` e `HANDOFF.md` com os comportamentos esperados.
-6. Validado `npm run build` e regenerado o instalador `release/MDWord-0.1.0-Setup.exe`.
+5. Adicionado menu nativo `Arquivo > Recentes`, com abertura de item e limpeza da lista.
+6. Adicionado indicador `*` no titulo da janela quando ha alteracoes pendentes.
+7. Adicionado rascunho temporario para documento novo ainda nao salvo, com recuperacao ao reabrir.
+8. Adicionado `npm test` com verificacoes automatizadas de ciclo de documento.
+9. Atualizados `README.md`, `SPEC.md` e `HANDOFF.md` com os comportamentos esperados.
+10. Validado `npm test`, `npm run build` e regenerado o instalador `release/MDWord-0.1.0-Setup.exe`.
 
 ## 2026-04-24
 

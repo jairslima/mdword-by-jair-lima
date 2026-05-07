@@ -96,6 +96,54 @@ async function pushRecentFile(filePath) {
   } catch (error) {
     console.warn(`Nao foi possivel salvar recentes: ${error.message || String(error)}`);
   }
+  refreshMenu();
+}
+
+function getRecentMenuItems() {
+  if (!appSettings.recentFiles.length) {
+    return [{ label: 'Nenhum arquivo recente', enabled: false }];
+  }
+
+  return [
+    ...appSettings.recentFiles.map((filePath, index) => ({
+      label: `${index + 1}. ${path.basename(filePath)}`,
+      sublabel: filePath,
+      click: () => sendMenuAction({ type: 'openRecent', filePath })
+    })),
+    { type: 'separator' },
+    { label: 'Limpar recentes', click: () => clearRecentFiles() }
+  ];
+}
+
+async function clearRecentFiles() {
+  appSettings.recentFiles = [];
+  try {
+    await saveSettings();
+  } catch (error) {
+    console.warn(`Nao foi possivel limpar recentes: ${error.message || String(error)}`);
+  }
+  refreshMenu();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('app:state-updated', {
+      recentFiles: appSettings.recentFiles
+    });
+  }
+}
+
+function applyAppMenu() {
+  const appMenu = buildMenu();
+  Menu.setApplicationMenu(appMenu);
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setMenu(appMenu);
+    mainWindow.setAutoHideMenuBar(false);
+    mainWindow.setMenuBarVisibility(true);
+  }
+}
+
+function refreshMenu() {
+  if (app.isReady()) {
+    applyAppMenu();
+  }
 }
 
 function buildMenu() {
@@ -106,6 +154,7 @@ function buildMenu() {
         { label: 'Novo', accelerator: 'CmdOrCtrl+N', click: () => sendMenuAction('new') },
         { label: 'Fechar documento', accelerator: 'CmdOrCtrl+W', click: () => sendMenuAction('closeDocument') },
         { label: 'Abrir Markdown', accelerator: 'CmdOrCtrl+O', click: () => sendMenuAction('open') },
+        { label: 'Recentes', submenu: getRecentMenuItems() },
         { type: 'separator' },
         { label: 'Salvar', accelerator: 'CmdOrCtrl+S', click: () => sendMenuAction('save') },
         { label: 'Salvar como', accelerator: 'CmdOrCtrl+Shift+S', click: () => sendMenuAction('saveAs') },
@@ -118,7 +167,7 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Imprimir', accelerator: 'CmdOrCtrl+P', click: () => sendMenuAction('print') },
         { type: 'separator' },
-        { role: 'quit', label: 'Sair' }
+        { label: 'Sair', accelerator: 'CmdOrCtrl+Q', click: () => requestWindowClose() }
       ]
     },
     {
@@ -176,6 +225,14 @@ function sendMenuAction(action) {
   }
 }
 
+function requestWindowClose() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.close();
+  } else {
+    app.quit();
+  }
+}
+
 function sendDocumentPayload(payload) {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('document:payload', payload);
@@ -206,11 +263,7 @@ function createMainWindow() {
     }
   });
 
-  const appMenu = buildMenu();
-  Menu.setApplicationMenu(appMenu);
-  mainWindow.setMenu(appMenu);
-  mainWindow.setAutoHideMenuBar(false);
-  mainWindow.setMenuBarVisibility(true);
+  applyAppMenu();
 
   mainWindow.on('close', (event) => {
     if (windowCloseConfirmed || mainWindow.webContents.isLoading()) {
@@ -359,6 +412,13 @@ ipcMain.handle('app:get-state', async () => ({
   recentFiles: appSettings.recentFiles
 }));
 
+ipcMain.handle('app:set-window-title', async (_event, title) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setTitle(title || 'MDWord');
+  }
+  return { ok: true };
+});
+
 ipcMain.handle('app:consume-pending-document', async () => {
   const payload = pendingLaunchDocument;
   pendingLaunchDocument = null;
@@ -378,6 +438,22 @@ ipcMain.handle('app:confirm-unsaved', async (_event, payload) => {
   });
 
   return ['save', 'discard', 'cancel'][result.response] || 'cancel';
+});
+
+ipcMain.handle('app:confirm-draft-recovery', async (_event, payload) => {
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    buttons: ['Restaurar', 'Descartar'],
+    defaultId: 0,
+    cancelId: 1,
+    title: 'Rascunho encontrado',
+    message: 'Foi encontrado um rascunho nao salvo.',
+    detail: payload?.updatedAt
+      ? `Deseja restaurar o rascunho salvo automaticamente em ${payload.updatedAt}?`
+      : 'Deseja restaurar esse conteudo?'
+  });
+
+  return result.response === 0 ? 'restore' : 'discard';
 });
 
 ipcMain.handle('app:confirm-window-close', async () => {

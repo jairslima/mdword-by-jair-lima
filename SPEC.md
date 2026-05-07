@@ -138,6 +138,9 @@ Decisoes arquiteturais importantes:
 9. Atalhos de arquivo e formatacao devem funcionar pelo menu nativo e por fallback no renderer quando o foco estiver dentro do editor.
 10. Ao abrir o aplicativo, o foco deve ir para o editor, permitindo colar texto imediatamente com `Ctrl+V`.
 11. Qualquer acao que troque ou feche o documento deve proteger alteracoes pendentes com as opcoes salvar, descartar ou cancelar.
+12. Arquivos recentes devem estar acessiveis na faixa do app e no menu nativo `Arquivo > Recentes`.
+13. O titulo da janela deve exibir `*` quando houver alteracoes pendentes.
+14. Documento novo ainda nao salvo deve manter rascunho temporario local e oferecer recuperacao quando o app reabrir apos queda ou fechamento inesperado.
 
 Convencoes relevantes:
 
@@ -219,6 +222,9 @@ Criterios de aceite atuais:
 14. Permitir colar conteudo imediatamente apos abrir o aplicativo, sem clicar antes no editor.
 15. Ao fechar a janela com documento novo ou editado, perguntar se o usuario deseja salvar, descartar ou cancelar o fechamento.
 16. Ao abrir, importar, abrir recente, criar novo, fechar documento ou receber arquivo por associacao do Windows, perguntar antes de substituir alteracoes pendentes.
+17. Exibir recentes no menu nativo `Arquivo > Recentes`, incluindo opcao de limpar a lista.
+18. Exibir `*` no titulo da janela enquanto houver alteracoes pendentes.
+19. Restaurar rascunho local de documento novo quando houver conteudo nao salvo em `localStorage`.
 
 Como validar manualmente:
 
@@ -233,12 +239,16 @@ Como validar manualmente:
 9. Abrir o aplicativo e testar `Ctrl+V` imediatamente em documento vazio.
 10. Colar texto em documento novo e fechar a janela, confirmando que aparece a pergunta de salvamento.
 11. Com alteracoes pendentes, testar Novo, Abrir, Importar, Recente e arquivo aberto por associacao, confirmando que nenhuma acao substitui o texto sem confirmacao.
+12. Abrir `Arquivo > Recentes`, abrir um arquivo da lista e limpar recentes.
+13. Editar texto e conferir `*` no titulo da janela.
+14. Simular rascunho local, reabrir o app e confirmar que a recuperacao e oferecida.
 
 Testes minimos esperados:
 
-1. Build do renderer.
-2. Roundtrip basico de abrir, editar e salvar.
-3. Geracao do instalador Windows.
+1. `npm test`
+2. Build do renderer.
+3. Roundtrip basico de abrir, editar e salvar.
+4. Geracao do instalador Windows.
 
 ## 10. Operacao e handoff
 
@@ -257,8 +267,9 @@ Quais comandos sao usados com frequencia:
 
 1. `npm install`
 2. `npm run dev`
-3. `npm run build`
-4. `npm run dist`
+3. `npm test`
+4. `npm run build`
+5. `npm run dist`
 
 O que um novo agente precisa ler primeiro:
 

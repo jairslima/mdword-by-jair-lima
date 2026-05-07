@@ -14,6 +14,7 @@
     "build": "vite build --config vite.config.mjs",
     "build:ocr": "python scripts/build_ocr_runtime.py",
     "dist": "npm run build:ocr && electron-builder",
+    "test": "node scripts/document_lifecycle.test.cjs",
     "start": "electron .",
     "make:icon": "python scripts/make_icon.py"
   },
