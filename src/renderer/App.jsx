@@ -26,6 +26,7 @@ export default function App() {
   const editorReadyTimerRef = useRef(null);
   const programmaticChangeRef = useRef(false);
   const lastShortcutActionRef = useRef({ name: '', at: 0 });
+  const closeRequestInFlightRef = useRef(false);
   const [filePath, setFilePath] = useState('');
   const [status, setStatus] = useState('Pronto');
   const [dirty, setDirty] = useState(false);
@@ -42,6 +43,15 @@ export default function App() {
   const getEditor = () => editorRef.current?.getInstance();
 
   const getMarkdown = () => getEditor()?.getMarkdown() ?? '';
+
+  const focusEditorSoon = (delay = 0) => {
+    window.setTimeout(() => {
+      const editor = getEditor();
+      if (editor) {
+        editor.focus();
+      }
+    }, delay);
+  };
 
   const runEditorCommand = (command, payload) => {
     const editor = getEditor();
@@ -109,6 +119,7 @@ export default function App() {
     pendingMarkdownRef.current = null;
     window.setTimeout(() => {
       programmaticChangeRef.current = false;
+      focusEditorSoon();
     }, 0);
   };
 
@@ -120,12 +131,25 @@ export default function App() {
     setMarkdown(pendingMarkdownRef.current);
   };
 
-  const confirmDiscard = () => {
+  const confirmUnsavedChanges = async () => {
     if (!dirty) {
       return true;
     }
 
-    return window.confirm('Existem alteracoes nao salvas. Deseja continuar e descartar essas alteracoes?');
+    const choice = await window.mdword.confirmUnsaved({
+      title: getTitleFromPath(filePath),
+      filePath
+    });
+
+    if (choice === 'discard') {
+      return true;
+    }
+
+    if (choice === 'save') {
+      return handleSave();
+    }
+
+    return false;
   };
 
   const resetDocument = (nextStatus) => {
@@ -138,6 +162,7 @@ export default function App() {
     setStatus(nextStatus);
     window.localStorage.removeItem('mdword-draft');
     window.localStorage.removeItem('mdword-last-path');
+    focusEditorSoon(120);
   };
 
   const applyDocument = (payload, nextStatus) => {
@@ -151,18 +176,19 @@ export default function App() {
     setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
     setStatus(nextStatus);
     refreshAppState();
+    focusEditorSoon(80);
   };
 
-  const handleNew = () => {
-    if (!confirmDiscard()) {
+  const handleNew = async () => {
+    if (!(await confirmUnsavedChanges())) {
       return;
     }
 
     resetDocument('Novo documento criado');
   };
 
-  const handleCloseDocument = () => {
-    if (!confirmDiscard()) {
+  const handleCloseDocument = async () => {
+    if (!(await confirmUnsavedChanges())) {
       return;
     }
 
@@ -170,7 +196,7 @@ export default function App() {
   };
 
   const handleOpen = async () => {
-    if (!confirmDiscard()) {
+    if (!(await confirmUnsavedChanges())) {
       return;
     }
 
@@ -186,7 +212,12 @@ export default function App() {
       return handleSaveAs();
     }
 
+    if (payload?.canceled) {
+      return false;
+    }
+
     applyDocument(payload, payload?.filePath ? `Arquivo salvo: ${getTitleFromPath(payload.filePath)}` : status);
+    return true;
   };
 
   const handleSaveAs = async () => {
@@ -195,11 +226,16 @@ export default function App() {
       suggestedPath: filePath || ''
     });
 
+    if (payload?.canceled) {
+      return false;
+    }
+
     applyDocument(payload, payload?.filePath ? `Arquivo salvo como: ${getTitleFromPath(payload.filePath)}` : status);
+    return true;
   };
 
   const handleImportDocx = async () => {
-    if (!confirmDiscard()) {
+    if (!(await confirmUnsavedChanges())) {
       return;
     }
 
@@ -208,7 +244,7 @@ export default function App() {
   };
 
   const handleImportPdf = async () => {
-    if (!confirmDiscard()) {
+    if (!(await confirmUnsavedChanges())) {
       return;
     }
 
@@ -222,7 +258,7 @@ export default function App() {
   };
 
   const handleImportPdfOcr = async () => {
-    if (!confirmDiscard()) {
+    if (!(await confirmUnsavedChanges())) {
       return;
     }
 
@@ -263,7 +299,7 @@ export default function App() {
   };
 
   const handleOpenRecent = async (recentPath) => {
-    if (!confirmDiscard()) {
+    if (!(await confirmUnsavedChanges())) {
       return;
     }
 
@@ -360,6 +396,7 @@ export default function App() {
       }
 
       flushPendingMarkdown();
+      focusEditorSoon();
       window.clearInterval(editorReadyTimerRef.current);
       editorReadyTimerRef.current = null;
     }, 100);
@@ -414,8 +451,29 @@ export default function App() {
   }, [dirty, filePath]);
 
   useEffect(() => {
-    const unsubscribePayload = window.mdword.onDocumentPayload((payload) => {
+    const unsubscribePayload = window.mdword.onDocumentPayload(async (payload) => {
+      if (!(await confirmUnsavedChanges())) {
+        return;
+      }
+
       applyDocument(payload, payload?.status || 'Arquivo aberto');
+    });
+
+    const unsubscribeCloseRequest = window.mdword.onCloseRequest(async () => {
+      if (closeRequestInFlightRef.current) {
+        return;
+      }
+
+      closeRequestInFlightRef.current = true;
+      try {
+        const canClose = await confirmUnsavedChanges();
+        if (canClose) {
+          await window.mdword.confirmWindowClose();
+          return;
+        }
+      } finally {
+        closeRequestInFlightRef.current = false;
+      }
     });
 
     const unsubscribe = window.mdword.onMenuAction((action) => {
@@ -453,6 +511,7 @@ export default function App() {
 
     return () => {
       unsubscribePayload();
+      unsubscribeCloseRequest();
       unsubscribe();
     };
   }, [filePath, dirty, status]);
@@ -571,7 +630,7 @@ export default function App() {
           <strong>Markdown puro</strong>
           <span className="summary-separator" />
           <span className="summary-label">Auto save</span>
-          <strong>{lastSavedAt ? `ultimo save em ${lastSavedAt}` : 'ativo a cada 10 segundos'}</strong>
+          <strong>{filePath ? (lastSavedAt ? `ultimo save em ${lastSavedAt}` : 'ativo a cada 10 segundos') : 'salve o arquivo para ativar'}</strong>
         </div>
 
         <div className="recent-strip">
@@ -601,7 +660,7 @@ export default function App() {
               useCommandShortcut
               hideModeSwitch
               toolbarItems={[]}
-              autofocus={false}
+              autofocus
               usageStatistics={false}
               onChange={() => {
                 if (programmaticChangeRef.current) {

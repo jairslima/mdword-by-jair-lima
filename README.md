@@ -12,6 +12,8 @@ MDWord e um editor desktop de Markdown puro com visual inspirado no WordPad.
 6. Imprime com a formatacao renderizada.
 7. Inicia em documento vazio, mantem auto save para arquivo salvo e lista de arquivos recentes.
 8. Leva o runtime de OCR dentro do instalador, sem exigir Python no computador de destino.
+9. Coloca o foco no editor ao abrir, para permitir colar texto imediatamente.
+10. Protege alteracoes nao salvas ao fechar, abrir outro arquivo, importar, criar novo ou trocar de documento.
 
 ## Perfil do editor
 

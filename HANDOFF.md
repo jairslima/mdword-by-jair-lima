@@ -26,6 +26,8 @@ Entregas concluidas:
 18. Validacao visual registrada em 24/04/2026: o painel branco inutil sumiu e a tela principal ficou sem toolbar duplicada.
 19. App ajustado em 24/04/2026 para iniciar em documento vazio, sem restaurar ultimo arquivo, e com comando `Fechar documento` na ribbon e no menu nativo.
 20. Atalhos revisados em 24/04/2026 com aceleradores no menu nativo e fallback `keydown` no renderer para arquivo e formatacao.
+21. App ajustado em 07/05/2026 para focar o editor ao abrir, permitindo colar imediatamente com `Ctrl+V`.
+22. Fechamento da janela e troca de documento agora protegem alteracoes pendentes com as opcoes `Salvar`, `Descartar` e `Cancelar`.
 
 ## Artefatos principais
 
@@ -46,6 +48,9 @@ Entregas concluidas:
 8. Em nova instalacao, reconfirmar visualmente que nao ha toolbar duplicada nem painel branco fixo abaixo do conteudo.
 9. Confirmar que abrir o app diretamente mostra documento vazio, enquanto abrir um `.md` pelo Explorer carrega somente o arquivo selecionado.
 10. Confirmar `Ctrl+N`, `Ctrl+S`, `Ctrl+B`, `Ctrl+I`, `Ctrl+K`, titulos e listas com foco dentro do editor.
+11. Abrir o app diretamente e testar `Ctrl+V` sem clicar no editor.
+12. Colar conteudo em documento novo e fechar a janela, confirmando que o app pergunta se deve salvar.
+13. Com alteracoes pendentes, testar Novo, Abrir, Recentes, Importar e arquivo recebido por associacao do Windows, confirmando que nenhuma troca de documento ocorre sem confirmacao.
 
 ## Melhor proxima entrega
 

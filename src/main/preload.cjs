@@ -3,6 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('mdword', {
   getAppState: () => ipcRenderer.invoke('app:get-state'),
   consumePendingDocument: () => ipcRenderer.invoke('app:consume-pending-document'),
+  confirmUnsaved: (payload) => ipcRenderer.invoke('app:confirm-unsaved', payload),
+  confirmWindowClose: () => ipcRenderer.invoke('app:confirm-window-close'),
   openMarkdown: () => ipcRenderer.invoke('file:open-markdown'),
   saveMarkdown: (payload) => ipcRenderer.invoke('file:save-markdown', payload),
   saveMarkdownAs: (payload) => ipcRenderer.invoke('file:save-markdown-as', payload),
@@ -22,5 +24,10 @@ contextBridge.exposeInMainWorld('mdword', {
     const wrapped = (_event, action) => listener(action);
     ipcRenderer.on('menu:action', wrapped);
     return () => ipcRenderer.removeListener('menu:action', wrapped);
+  },
+  onCloseRequest: (listener) => {
+    const wrapped = () => listener();
+    ipcRenderer.on('app:request-close', wrapped);
+    return () => ipcRenderer.removeListener('app:request-close', wrapped);
   }
 });

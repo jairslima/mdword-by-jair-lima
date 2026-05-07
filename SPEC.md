@@ -136,6 +136,8 @@ Decisoes arquiteturais importantes:
 7. A ribbon deve priorizar comandos que cabem no perfil Markdown puro: arquivo, negrito, italico, codigo, titulos, listas, citacao, linha, bloco de codigo, link, imagem por URL e conversoes.
 8. A toolbar interna do Toast UI deve permanecer oculta para nao duplicar comandos da ribbon nem criar faixa vazia no editor.
 9. Atalhos de arquivo e formatacao devem funcionar pelo menu nativo e por fallback no renderer quando o foco estiver dentro do editor.
+10. Ao abrir o aplicativo, o foco deve ir para o editor, permitindo colar texto imediatamente com `Ctrl+V`.
+11. Qualquer acao que troque ou feche o documento deve proteger alteracoes pendentes com as opcoes salvar, descartar ou cancelar.
 
 Convencoes relevantes:
 
@@ -214,6 +216,9 @@ Criterios de aceite atuais:
 11. Exibir a barra de menu nativa com `Arquivo`, `Editar` e `Exibir`.
 12. Fechar o documento atual e voltar para um documento vazio sem encerrar o aplicativo.
 13. Executar atalhos principais como `Ctrl+N`, `Ctrl+S`, `Ctrl+B`, `Ctrl+I`, `Ctrl+K`, listas e titulos com foco no editor.
+14. Permitir colar conteudo imediatamente apos abrir o aplicativo, sem clicar antes no editor.
+15. Ao fechar a janela com documento novo ou editado, perguntar se o usuario deseja salvar, descartar ou cancelar o fechamento.
+16. Ao abrir, importar, abrir recente, criar novo, fechar documento ou receber arquivo por associacao do Windows, perguntar antes de substituir alteracoes pendentes.
 
 Como validar manualmente:
 
@@ -225,6 +230,9 @@ Como validar manualmente:
 6. Imprimir ou abrir a janela de impressao.
 7. Abrir um `.md` pelo Explorer usando o MDWord.
 8. Confirmar que a barra de menu nativa aparece na janela principal.
+9. Abrir o aplicativo e testar `Ctrl+V` imediatamente em documento vazio.
+10. Colar texto em documento novo e fechar a janela, confirmando que aparece a pergunta de salvamento.
+11. Com alteracoes pendentes, testar Novo, Abrir, Importar, Recente e arquivo aberto por associacao, confirmando que nenhuma acao substitui o texto sem confirmacao.
 
 Testes minimos esperados:
 

@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 2026-05-07
+
+1. Corrigido foco inicial do aplicativo, agora o editor recebe foco ao abrir e permite colar com `Ctrl+V` sem clique previo.
+2. Substituida a confirmacao simples de descarte por um fluxo com `Salvar`, `Descartar` e `Cancelar`.
+3. Protegidas alteracoes pendentes ao fechar a janela, criar novo documento, fechar documento, abrir arquivo, abrir recente, importar DOCX, importar PDF e receber arquivo por associacao do Windows.
+4. Ajustado o texto de auto save para informar que documento novo precisa ser salvo antes de ativar auto save.
+5. Atualizados `README.md`, `SPEC.md` e `HANDOFF.md` com os comportamentos esperados.
+6. Validado `npm run build` e regenerado o instalador `release/MDWord-0.1.0-Setup.exe`.
+
 ## 2026-04-24
 
 1. Removida a toolbar interna duplicada do Toast UI Editor, mantendo apenas a ribbon do MDWord.

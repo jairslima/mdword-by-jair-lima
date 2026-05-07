@@ -20,6 +20,7 @@ app.commandLine.appendSwitch('disable-gpu-sandbox');
 let mainWindow = null;
 let settingsPath = '';
 let pendingLaunchDocument = null;
+let windowCloseConfirmed = false;
 let appSettings = {
   recentFiles: []
 };
@@ -187,6 +188,7 @@ function queueLaunchDocument(payload) {
 }
 
 function createMainWindow() {
+  windowCloseConfirmed = false;
   mainWindow = new BrowserWindow({
     width: 1480,
     height: 960,
@@ -209,6 +211,15 @@ function createMainWindow() {
   mainWindow.setMenu(appMenu);
   mainWindow.setAutoHideMenuBar(false);
   mainWindow.setMenuBarVisibility(true);
+
+  mainWindow.on('close', (event) => {
+    if (windowCloseConfirmed || mainWindow.webContents.isLoading()) {
+      return;
+    }
+
+    event.preventDefault();
+    mainWindow.webContents.send('app:request-close');
+  });
 
   if (isDev) {
     mainWindow.loadURL('http://127.0.0.1:5173');
@@ -352,6 +363,31 @@ ipcMain.handle('app:consume-pending-document', async () => {
   const payload = pendingLaunchDocument;
   pendingLaunchDocument = null;
   return payload || { canceled: true };
+});
+
+ipcMain.handle('app:confirm-unsaved', async (_event, payload) => {
+  const title = payload?.title || 'Sem titulo.md';
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    buttons: ['Salvar', 'Descartar', 'Cancelar'],
+    defaultId: 0,
+    cancelId: 2,
+    title: 'Alteracoes nao salvas',
+    message: 'Deseja salvar as alteracoes antes de continuar?',
+    detail: `${title} tem alteracoes que ainda nao foram salvas.`
+  });
+
+  return ['save', 'discard', 'cancel'][result.response] || 'cancel';
+});
+
+ipcMain.handle('app:confirm-window-close', async () => {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return { closed: true };
+  }
+
+  windowCloseConfirmed = true;
+  mainWindow.close();
+  return { closed: true };
 });
 
 ipcMain.handle('file:open-markdown', async () => {
