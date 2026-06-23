@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('mdword', {
   confirmDraftRecovery: (payload) => ipcRenderer.invoke('app:confirm-draft-recovery', payload),
   confirmWindowClose: () => ipcRenderer.invoke('app:confirm-window-close'),
   setWindowTitle: (title) => ipcRenderer.invoke('app:set-window-title', title),
+  readClipboardText: () => ipcRenderer.invoke('clipboard:read-text'),
   openMarkdown: () => ipcRenderer.invoke('file:open-markdown'),
   saveMarkdown: (payload) => ipcRenderer.invoke('file:save-markdown', payload),
   saveMarkdownAs: (payload) => ipcRenderer.invoke('file:save-markdown-as', payload),

@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## 2026-06-22
+
+1. Revisada a colagem de Markdown no modo visual para interpretar o bloco na selecao atual, em vez de recompor o documento inteiro ou inserir os marcadores como texto literal.
+2. Ampliada a deteccao de Markdown colado para titulos, listas, citacoes, blocos de codigo, separadores, links, codigo inline e tabelas.
+3. Adicionados testes automatizados para deteccao, normalizacao e insercao de Markdown, incluindo preservacao do fluxo entre os modos Markdown e WYSIWYG.
+4. Adicionado `Colar como texto` na ribbon, no menu nativo e no atalho `Ctrl+Shift+V`.
+5. Adicionada notificacao temporaria depois de colar Markdown ou texto puro.
+6. Adicionado snapshot de colagem para desfazer blocos grandes integralmente com `Ctrl+Z`.
+7. Adicionados perfis persistentes `Markdown puro` e `Markdown com tabelas`, com comando de tabela condicionado ao perfil.
+8. Ampliados os testes para colagem no meio do paragrafo, sobre selecao e validacao do snapshot de desfazer.
+9. Reescrito o helper OCR para chamar o Tesseract diretamente, reduzindo o executavel de 72,59 MB para 27,46 MB.
+10. Atualizada a versao do aplicativo para `0.1.1`.
+11. Instalador reduzido de 242,99 MiB para 198,23 MiB, economia de 18,4%.
+
+## 2026-06-08
+
+1. Corrigido colar conteudo Markdown: o editor WYSIWYG nao interpretava markdown colado como texto puro. Adicionado interceptador de paste (fase de captura) que detecta markdown pelos padroes `# `, `**`, `- `, `> `, etc. e chama `setMarkdown` em vez de deixar o ProseMirror inserir texto bruto.
+2. Corrigido abrir arquivo e recentes sem formatacao WYSIWYG: `applyDocument` agora remonta o editor com `initialValue` vazio e armazena o conteudo em `pendingMarkdownRef`. Apos a remontagem, `flushPendingMarkdown` aplica o conteudo via ciclo `changeMode(markdown) → setMarkdown → changeMode(wysiwyg)`, forcando o re-parse completo. Elimina condicao de corrida do React 17 onde prop `initialValue` mudava antes do `key`.
+3. Mesma correcao aplicada a `resetDocument` (Ctrl+N, Ctrl+W) e recuperacao de rascunho no bootstrap.
+
 ## 2026-05-07
 
 1. Corrigido foco inicial do aplicativo, agora o editor recebe foco ao abrir e permite colar com `Ctrl+V` sem clique previo.

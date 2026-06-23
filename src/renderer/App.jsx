@@ -6,6 +6,12 @@ import {
   normalizeMenuAction,
   shouldSaveDraft
 } from '../shared/documentLifecycle.js';
+import {
+  canUndoPaste,
+  insertMarkdownAtSelection,
+  insertPlainTextAtSelection,
+  looksLikeMarkdown
+} from '../shared/markdownPaste.js';
 
 const headingOptions = [
   { label: 'Estilo', value: '' },
@@ -16,8 +22,10 @@ const headingOptions = [
 
 const initialText = '';
 const draftKey = 'mdword-draft';
+
 const draftUpdatedAtKey = 'mdword-draft-updated-at';
 const lastPathKey = 'mdword-last-path';
+const markdownProfileKey = 'mdword-markdown-profile';
 
 function getTitleFromPath(filePath) {
   if (!filePath) {
@@ -36,12 +44,21 @@ export default function App() {
   const programmaticChangeRef = useRef(false);
   const lastShortcutActionRef = useRef({ name: '', at: 0 });
   const closeRequestInFlightRef = useRef(false);
+  const editorPaperRef = useRef(null);
+  const pasteHandlerRef = useRef(null);
+  const pasteUndoStackRef = useRef([]);
+  const notificationTimerRef = useRef(null);
   const [filePath, setFilePath] = useState('');
   const [status, setStatus] = useState('Pronto');
   const [dirty, setDirty] = useState(false);
   const [recentFiles, setRecentFiles] = useState([]);
   const [lastSavedAt, setLastSavedAt] = useState('');
   const [editorKey, setEditorKey] = useState(0);
+  const [editorInitValue, setEditorInitValue] = useState('');
+  const [markdownProfile, setMarkdownProfile] = useState(
+    () => window.localStorage.getItem(markdownProfileKey) || 'pure'
+  );
+  const [notification, setNotification] = useState('');
   const recentPreview = recentFiles.slice(0, 3);
 
   const clearDraft = () => {
@@ -58,6 +75,33 @@ export default function App() {
   const getEditor = () => editorRef.current?.getInstance();
 
   const getMarkdown = () => getEditor()?.getMarkdown() ?? '';
+
+  const showNotification = (message) => {
+    if (notificationTimerRef.current) {
+      window.clearTimeout(notificationTimerRef.current);
+    }
+
+    setNotification(message);
+    notificationTimerRef.current = window.setTimeout(() => {
+      setNotification('');
+      notificationTimerRef.current = null;
+    }, 2400);
+  };
+
+  const clearPasteHistory = () => {
+    pasteUndoStackRef.current = [];
+  };
+
+  const recordPaste = (before, after) => {
+    if (before === after) {
+      return;
+    }
+
+    pasteUndoStackRef.current = [
+      ...pasteUndoStackRef.current.slice(-19),
+      { before, after }
+    ];
+  };
 
   const focusEditorSoon = (delay = 0) => {
     window.setTimeout(() => {
@@ -122,6 +166,31 @@ export default function App() {
     runEditorCommand('addImage', { imageUrl, altText });
   };
 
+  const handleTable = () => {
+    const rowCount = Number(window.prompt('Numero de linhas, incluindo o cabecalho', '3'));
+    if (!Number.isInteger(rowCount) || rowCount < 2 || rowCount > 20) {
+      showNotification('Use entre 2 e 20 linhas');
+      return;
+    }
+
+    const columnCount = Number(window.prompt('Numero de colunas', '2'));
+    if (!Number.isInteger(columnCount) || columnCount < 1 || columnCount > 10) {
+      showNotification('Use entre 1 e 10 colunas');
+      return;
+    }
+
+    runEditorCommand('addTable', { rowCount, columnCount });
+    showNotification('Tabela inserida');
+  };
+
+  const handleProfileChange = (event) => {
+    const profile = event.target.value === 'tables' ? 'tables' : 'pure';
+    setMarkdownProfile(profile);
+    window.localStorage.setItem(markdownProfileKey, profile);
+    showNotification(profile === 'tables' ? 'Perfil com tabelas ativado' : 'Perfil Markdown puro ativado');
+    focusEditorSoon();
+  };
+
   const setMarkdown = (markdown) => {
     const editor = getEditor();
     if (!editor) {
@@ -130,7 +199,13 @@ export default function App() {
     }
 
     programmaticChangeRef.current = true;
-    editor.setMarkdown(markdown ?? '', false);
+    if (typeof editor.changeMode === 'function') {
+      editor.changeMode('markdown', true);
+      editor.setMarkdown(markdown ?? '', false);
+      editor.changeMode('wysiwyg', true);
+    } else {
+      editor.setMarkdown(markdown ?? '', false);
+    }
     pendingMarkdownRef.current = null;
     window.setTimeout(() => {
       programmaticChangeRef.current = false;
@@ -169,9 +244,11 @@ export default function App() {
 
   const resetDocument = (nextStatus, options = {}) => {
     const { clearStoredDraft = true } = options;
-    pendingMarkdownRef.current = initialText;
-    setMarkdown(initialText);
-    setEditorKey((currentKey) => currentKey + 1);
+    programmaticChangeRef.current = true;
+    setEditorInitValue('');
+    setEditorKey((k) => k + 1);
+    pendingMarkdownRef.current = null;
+    clearPasteHistory();
     setFilePath('');
     setDirty(false);
     setLastSavedAt('');
@@ -179,7 +256,10 @@ export default function App() {
     if (clearStoredDraft) {
       clearDraft();
     }
-    focusEditorSoon(120);
+    window.setTimeout(() => {
+      programmaticChangeRef.current = false;
+      focusEditorSoon(120);
+    }, 50);
   };
 
   const applyDocument = (payload, nextStatus) => {
@@ -187,14 +267,23 @@ export default function App() {
       return;
     }
 
-    setMarkdown(payload.markdown ?? '');
+    const content = payload.markdown ?? '';
+    programmaticChangeRef.current = true;
+    setEditorInitValue('');
+    setEditorKey((k) => k + 1);
+    pendingMarkdownRef.current = content;
+    clearPasteHistory();
     setFilePath(payload.filePath || payload.sourcePath || '');
     setDirty(false);
     setLastSavedAt(new Date().toLocaleTimeString('pt-BR'));
     setStatus(nextStatus);
     clearDraft();
     refreshAppState();
-    focusEditorSoon(80);
+    window.setTimeout(() => {
+      if (pendingMarkdownRef.current !== null) {
+        setMarkdown(pendingMarkdownRef.current);
+      }
+    }, 120);
   };
 
   const handleNew = async () => {
@@ -331,6 +420,48 @@ export default function App() {
     }
   };
 
+  const handleUndo = () => {
+    const editor = getEditor();
+    if (!editor) {
+      return;
+    }
+
+    const snapshot = pasteUndoStackRef.current.at(-1);
+    if (canUndoPaste(editor.getMarkdown(), snapshot)) {
+      pasteUndoStackRef.current = pasteUndoStackRef.current.slice(0, -1);
+      setMarkdown(snapshot.before);
+      setDirty(true);
+      setStatus('Colagem desfeita');
+      showNotification('Colagem desfeita por completo');
+      return;
+    }
+
+    runEditorCommand('undo');
+  };
+
+  const handlePastePlain = async () => {
+    const text = await window.mdword.readClipboardText();
+    if (!text) {
+      showNotification('A area de transferencia esta vazia');
+      return;
+    }
+
+    const editor = getEditor();
+    if (!editor) {
+      return;
+    }
+
+    const before = editor.getMarkdown();
+    if (!insertPlainTextAtSelection(editor, text)) {
+      return;
+    }
+
+    recordPaste(before, editor.getMarkdown());
+    setDirty(true);
+    setStatus('Texto colado sem formatacao');
+    showNotification('Texto colado sem formatacao');
+  };
+
   const handleShortcut = (event) => {
     if (!(event.ctrlKey || event.metaKey)) {
       return;
@@ -359,6 +490,8 @@ export default function App() {
         q: { name: 'quit', run: handleQuit },
         s: { name: 'save', run: handleSave },
         w: { name: 'closeDocument', run: handleCloseDocument },
+        y: { name: 'redo', run: () => runEditorCommand('redo') },
+        z: { name: 'undo', run: handleUndo },
         '`': { name: 'code', run: () => runEditorCommand('code') }
       };
 
@@ -369,6 +502,16 @@ export default function App() {
     }
 
     if (shiftShortcut) {
+      if (key === 'v') {
+        runShortcut('pastePlain', handlePastePlain);
+        return;
+      }
+
+      if (key === 'z') {
+        runShortcut('redo', () => runEditorCommand('redo'));
+        return;
+      }
+
       if (key === 's') {
         runShortcut('saveAs', handleSaveAs);
         return;
@@ -430,6 +573,9 @@ export default function App() {
       if (editorReadyTimerRef.current) {
         window.clearInterval(editorReadyTimerRef.current);
       }
+      if (notificationTimerRef.current) {
+        window.clearTimeout(notificationTimerRef.current);
+      }
     };
   }, []);
 
@@ -452,13 +598,18 @@ export default function App() {
         });
 
         if (recoveryChoice === 'restore') {
-          pendingMarkdownRef.current = draft;
-          setMarkdown(draft);
+          programmaticChangeRef.current = true;
+          setEditorInitValue(draft);
+          setEditorKey((k) => k + 1);
+          pendingMarkdownRef.current = null;
           setFilePath('');
           setDirty(true);
           setLastSavedAt('');
           setStatus('Rascunho restaurado');
-          focusEditorSoon(120);
+          window.setTimeout(() => {
+            programmaticChangeRef.current = false;
+            focusEditorSoon(120);
+          }, 50);
           return;
         }
 
@@ -545,6 +696,8 @@ export default function App() {
       const menuAction = normalizeMenuAction(action);
       const actionName = menuAction.type;
       const actions = {
+        undo: handleUndo,
+        pastePlain: handlePastePlain,
         new: handleNew,
         closeDocument: handleCloseDocument,
         open: handleOpen,
@@ -600,12 +753,36 @@ export default function App() {
     };
   }, [filePath, dirty, status]);
 
+  pasteHandlerRef.current = (e) => {
+    const text = e.clipboardData?.getData('text/plain');
+    if (!text || !looksLikeMarkdown(text)) return;
+    const editor = getEditor();
+    if (!editor) return;
+
+    const before = editor.getMarkdown();
+    e.preventDefault();
+    e.stopPropagation();
+    if (!insertMarkdownAtSelection(editor, text)) return;
+    recordPaste(before, editor.getMarkdown());
+    setDirty(true);
+    setStatus('Markdown colado e formatado');
+    showNotification('Markdown formatado com sucesso');
+  };
+
+  useEffect(() => {
+    const container = editorPaperRef.current;
+    if (!container) return;
+    const handle = (e) => pasteHandlerRef.current?.(e);
+    container.addEventListener('paste', handle, true);
+    return () => container.removeEventListener('paste', handle, true);
+  }, []);
+
   return (
     <div className="shell">
       <header className="window-header">
         <div className="window-title">
           <strong>MDWord</strong>
-          <span>Editor visual para Markdown puro</span>
+          <span>{markdownProfile === 'tables' ? 'Editor visual para Markdown com tabelas' : 'Editor visual para Markdown puro'}</span>
         </div>
         <div className="document-meta">
           <strong>{filePath ? getTitleFromPath(filePath) : 'Sem titulo.md'}</strong>
@@ -669,6 +846,10 @@ export default function App() {
         </div>
 
         <div className="ribbon-group insert-group" aria-label="Inserir">
+          <button className="ribbon-command" onClick={handlePastePlain} title="Colar como texto (Ctrl+Shift+V)">
+            <span className="command-icon">TXT</span>
+            <span>Colar texto</span>
+          </button>
           <button className="ribbon-command" onClick={handleLink} title="Inserir link (Ctrl+K)">
             <span className="command-icon">L</span>
             <span>Link</span>
@@ -677,6 +858,12 @@ export default function App() {
             <span className="command-icon">IMG</span>
             <span>Imagem</span>
           </button>
+          {markdownProfile === 'tables' && (
+            <button className="ribbon-command" onClick={handleTable} title="Inserir tabela Markdown">
+              <span className="command-icon">TAB</span>
+              <span>Tabela</span>
+            </button>
+          )}
           <span className="ribbon-label">Inserir</span>
         </div>
 
@@ -704,7 +891,10 @@ export default function App() {
       <section className="document-strip">
         <div className="document-summary">
           <span className="summary-label">Perfil</span>
-          <strong>Markdown puro</strong>
+          <select className="profile-select" value={markdownProfile} onChange={handleProfileChange} aria-label="Perfil Markdown">
+            <option value="pure">Markdown puro</option>
+            <option value="tables">Markdown com tabelas</option>
+          </select>
           <span className="summary-separator" />
           <span className="summary-label">Auto save</span>
           <strong>{filePath ? (lastSavedAt ? `ultimo save em ${lastSavedAt}` : 'ativo a cada 10 segundos') : 'salve o arquivo para ativar'}</strong>
@@ -726,11 +916,11 @@ export default function App() {
 
       <main className="workspace">
         <section className="editor-stage">
-          <div className="editor-paper">
+          <div className="editor-paper" ref={editorPaperRef}>
             <Editor
               key={editorKey}
               ref={editorRef}
-              initialValue={initialText}
+              initialValue={editorInitValue}
               previewStyle="vertical"
               initialEditType="wysiwyg"
               height="auto"
@@ -755,6 +945,10 @@ export default function App() {
           </div>
         </section>
       </main>
+
+      <div className={notification ? 'app-notification visible' : 'app-notification'} role="status" aria-live="polite">
+        {notification}
+      </div>
 
       <footer className="statusbar">
         <span>{status}</span>

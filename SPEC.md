@@ -8,7 +8,7 @@ Objetivo principal: fornecer um editor visual desktop para arquivos Markdown pur
 
 Problema que resolve: editar Markdown como documento formatado, sem expor marcadores ao usuario no modo visual, mantendo o arquivo final em `.md`.
 
-Estado atual: base funcional em Electron com editor WYSIWYG, ribbon de ferramentas em perfil Markdown puro, barra de menu nativa visivel, abertura e salvamento de Markdown, abertura de `.md` pela associacao do Windows, impressao HTML, importacao de DOCX e PDF com OCR opcional, exportacao para DOCX via md2docx, exportacao para PDF, auto save em arquivo salvo, recentes, comando de fechar documento, inicializacao em documento vazio, runtime OCR empacotado e empacotamento Windows validado.
+Estado atual: versao `0.1.1` funcional em Electron com editor WYSIWYG, perfis Markdown puro e com tabelas, colagem formatada ou como texto, desfazer confiavel de colagens, barra de menu nativa, conversoes, auto save, recentes, runtime OCR otimizado e empacotamento Windows validado.
 
 ## 2. Escopo
 
@@ -25,7 +25,7 @@ O que este projeto faz:
 
 O que esta fora de escopo:
 
-1. Recursos que nao pertencem ao perfil Markdown puro, como tabelas, checklist, cabecalho de pagina, rodape de pagina, quebra manual de pagina e notas de rodape.
+1. Comandos de autoria que nao pertencem ao perfil Markdown puro, como criar tabelas, checklist, cabecalho de pagina, rodape de pagina, quebra manual de pagina e notas de rodape. Tabelas Markdown ja existentes podem ser abertas ou coladas e permanecem preservadas.
 2. Edicao colaborativa em rede.
 3. OCR com reconstruicao perfeita de layout para PDFs complexos.
 
@@ -78,7 +78,7 @@ Dependencias externas relevantes:
 4. markdown-it para renderizacao.
 5. md2docx para exportacao DOCX.
 6. pdf-parse para extracao textual de PDF.
-7. Python com PyMuPDF, Pillow e pytesseract para gerar o helper OCR empacotado.
+7. Python com PyMuPDF para gerar o helper OCR empacotado, que chama diretamente o Tesseract por subprocesso.
 8. Runtime local do Tesseract embarcado em `tools/ocr-runtime` e distribuido no instalador.
 
 Variaveis de ambiente: nenhuma obrigatoria.
@@ -127,13 +127,13 @@ npm run make:icon
 
 Decisoes arquiteturais importantes:
 
-1. O produto trabalha apenas com perfil Markdown puro.
-2. A interface nao oferece botoes para recursos sem representacao confiavel nesse perfil.
+1. O produto inicia no perfil Markdown puro e oferece opcionalmente o perfil Markdown com tabelas.
+2. A interface so oferece criacao de tabela quando o perfil com tabelas esta ativo.
 3. O Markdown e a fonte de verdade para salvar, imprimir e exportar.
 4. OCR de PDF pode entrar automaticamente quando a extracao textual e insuficiente.
 5. O app empacotado deve preferir o runtime OCR embarcado, sem depender de Python no destino.
 6. A exportacao DOCX deve preferir o runtime `md2docx.exe` empacotado, pois ele preserva mais recursos de Markdown do que a conversao HTML intermediaria.
-7. A ribbon deve priorizar comandos que cabem no perfil Markdown puro: arquivo, negrito, italico, codigo, titulos, listas, citacao, linha, bloco de codigo, link, imagem por URL e conversoes.
+7. A ribbon deve priorizar comandos que cabem no perfil ativo: arquivo, colar como texto, negrito, italico, codigo, titulos, listas, citacao, linha, bloco de codigo, link, imagem por URL, tabela opcional e conversoes.
 8. A toolbar interna do Toast UI deve permanecer oculta para nao duplicar comandos da ribbon nem criar faixa vazia no editor.
 9. Atalhos de arquivo e formatacao devem funcionar pelo menu nativo e por fallback no renderer quando o foco estiver dentro do editor.
 10. Ao abrir o aplicativo, o foco deve ir para o editor, permitindo colar texto imediatamente com `Ctrl+V`.
@@ -141,6 +141,11 @@ Decisoes arquiteturais importantes:
 12. Arquivos recentes devem estar acessiveis na faixa do app e no menu nativo `Arquivo > Recentes`.
 13. O titulo da janela deve exibir `*` quando houver alteracoes pendentes.
 14. Documento novo ainda nao salvo deve manter rascunho temporario local e oferecer recuperacao quando o app reabrir apos queda ou fechamento inesperado.
+15. Ao colar Markdown no modo visual, o app deve interpretar a formatacao na selecao atual, sem inserir os marcadores como texto literal nem mover o conteudo para o fim do documento.
+16. Tabelas Markdown recebidas por abertura ou colagem devem ser renderizadas e preservadas; sua criacao pela ribbon depende do perfil com tabelas.
+17. `Colar como texto` deve inserir o conteudo da area de transferencia literalmente na selecao atual.
+18. Colagens interceptadas devem registrar snapshot suficiente para que `Ctrl+Z` reverta toda a operacao.
+19. Apos colar Markdown ou texto puro, o app deve exibir confirmacao temporaria e acessivel.
 
 Convencoes relevantes:
 
@@ -170,6 +175,9 @@ O que ja esta pronto:
 7. Runtime OCR empacotado com helper executavel e Tesseract minimo.
 8. Runtime md2docx empacotado para exportacao DOCX.
 9. Painel branco inutil abaixo do conteudo removido e validado visualmente em 24/04/2026.
+10. Colagem como texto, notificacoes, desfazer de colagens e perfis Markdown implementados em 22/06/2026.
+11. Helper OCR otimizado de 72,59 MB para 27,46 MB, com reducao de 62,2%.
+12. Instalador `0.1.1` com 198,23 MiB, reducao de 18,4% em relacao ao pacote anterior.
 
 O que esta em andamento:
 
@@ -179,7 +187,6 @@ O que ainda falta:
 
 1. Recuperacao avancada de estrutura em PDFs mais complexos.
 2. Historico de versoes.
-3. Menu nativo de recentes.
 
 Principais riscos conhecidos:
 
@@ -193,8 +200,7 @@ Proxima tarefa recomendada: testar roundtrip real com arquivos DOCX e PDF do usu
 Entregas pendentes:
 
 1. Melhorar a heuristica de paragrafos e listas em PDF convertido por OCR.
-2. Menu nativo de recentes.
-3. Validacao da associacao de arquivo `.md` apos instalacao em maquina limpa.
+2. Validacao da associacao de arquivo `.md` apos instalacao em maquina limpa.
 
 Melhorias futuras:
 
@@ -225,6 +231,12 @@ Criterios de aceite atuais:
 17. Exibir recentes no menu nativo `Arquivo > Recentes`, incluindo opcao de limpar a lista.
 18. Exibir `*` no titulo da janela enquanto houver alteracoes pendentes.
 19. Restaurar rascunho local de documento novo quando houver conteudo nao salvo em `localStorage`.
+20. Colar Markdown com titulos, negrito, listas, citacoes, separadores, links, codigo ou tabelas e exibir o resultado formatado no modo visual.
+21. Colar como texto pela ribbon, pelo menu e por `Ctrl+Shift+V`.
+22. Desfazer uma colagem grande em uma unica operacao com `Ctrl+Z`.
+23. Exibir confirmacao visual breve depois de colar.
+24. Alternar e persistir os perfis Markdown puro e Markdown com tabelas.
+25. Criar tabela somente quando o perfil com tabelas estiver ativo.
 
 Como validar manualmente:
 
@@ -242,6 +254,11 @@ Como validar manualmente:
 12. Abrir `Arquivo > Recentes`, abrir um arquivo da lista e limpar recentes.
 13. Editar texto e conferir `*` no titulo da janela.
 14. Simular rascunho local, reabrir o app e confirmar que a recuperacao e oferecida.
+15. Posicionar o cursor no meio de um documento, colar um bloco Markdown e confirmar que o bloco foi formatado no local da selecao.
+16. Selecionar texto existente, colar Markdown e confirmar que somente a selecao foi substituida.
+17. Usar `Ctrl+Z` depois de uma colagem grande e confirmar a restauracao integral do conteudo anterior.
+18. Usar `Ctrl+Shift+V` com `**texto**` e confirmar que os asteriscos permanecem visiveis.
+19. Alternar o perfil, criar uma tabela, reiniciar o app e confirmar que a escolha foi preservada.
 
 Testes minimos esperados:
 

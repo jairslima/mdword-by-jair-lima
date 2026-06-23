@@ -200,6 +200,18 @@ button:hover {
   padding: 0 8px;
 }
 
+.profile-select {
+  height: 28px;
+  max-width: 190px;
+  border: 1px solid #c8c8c8;
+  border-radius: 4px;
+  background: #fff;
+  color: #222;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .command-row {
   display: flex;
   gap: 4px;
@@ -313,6 +325,31 @@ button:hover {
   background: #f3f3f3;
   color: #555;
   font-size: 12px;
+}
+
+.app-notification {
+  position: fixed;
+  z-index: 1000;
+  top: 190px;
+  left: 50%;
+  max-width: min(460px, calc(100vw - 32px));
+  padding: 10px 16px;
+  border: 1px solid #719356;
+  border-radius: 6px;
+  background: #edf6e7;
+  color: #294817;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.18);
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -8px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.app-notification.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 .toastui-editor-defaultUI {

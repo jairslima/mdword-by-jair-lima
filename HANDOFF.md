@@ -2,11 +2,12 @@
 
 ## Estado para retomada
 
-O projeto esta funcional e empacotado.
+O projeto esta funcional e empacotado. Atualizado em 2026-06-22.
 
 Entregas concluidas:
 
 1. Editor visual de Markdown puro.
+0. Corrigido: colar markdown, abrir arquivo e abrir recentes agora formatam corretamente em WYSIWYG (2026-06-08).
 2. Ribbon superior estilo WordPad com comandos compativeis com Markdown puro.
 3. Menu nativo `Arquivo > Abrir Markdown` abrindo o Explorer diretamente pelo processo principal.
 4. Importacao de DOCX.
@@ -32,10 +33,16 @@ Entregas concluidas:
 24. Titulo da janela passa a exibir `*` quando ha alteracoes pendentes.
 25. Documento novo ainda nao salvo passa a manter rascunho temporario local e oferecer recuperacao ao reabrir.
 26. Adicionado `npm test` para validar regras de ciclo de documento.
+27. Adicionado `Colar como texto` na ribbon, no menu nativo e no atalho `Ctrl+Shift+V`.
+28. Colagens Markdown agora exibem confirmacao visual e podem ser desfeitas integralmente com `Ctrl+Z`.
+29. Adicionados os perfis persistentes `Markdown puro` e `Markdown com tabelas`.
+30. Versao atualizada para `0.1.1`.
+31. Helper OCR reduzido de 72,59 MB para 27,46 MB e validado com Tesseract embarcado.
+32. Instalador reduzido de 242,99 MiB para 198,23 MiB, economia de 44,76 MiB ou 18,4%.
 
 ## Artefatos principais
 
-1. Instalador: `release/MDWord-0.1.0-Setup.exe`
+1. Instalador: `release/MDWord-0.1.1-Setup.exe`
 2. Executavel solto: `release/win-unpacked/MDWord.exe`
 3. Runtime OCR gerado sob demanda por `npm run build:ocr`
 4. Runtime md2docx local em `tools/md2docx-runtime/md2docx.exe`, ignorado pelo Git e copiado para `resources/md2docx-runtime` no empacotamento
@@ -58,10 +65,22 @@ Entregas concluidas:
 14. Testar `Arquivo > Recentes`, abertura de item recente e limpeza da lista.
 15. Confirmar `*` no titulo da janela enquanto houver alteracoes pendentes.
 16. Simular rascunho local de documento novo e confirmar oferta de recuperacao na abertura.
+17. Testar colagem Markdown no meio do documento, sobre uma selecao e desfazer com `Ctrl+Z`.
+18. Testar `Ctrl+Shift+V` com texto que contenha marcadores Markdown.
+19. Alternar para `Markdown com tabelas`, criar uma tabela e confirmar persistencia do perfil ao reabrir.
 
 ## Melhor proxima entrega
 
 1. Melhorar heuristica de OCR para paragrafos, listas e colunas.
-2. Criar menu nativo de recentes.
-3. Reduzir tamanho do bundle do renderer.
-4. Remover fallback absoluto para `C:\Users\jairs\Claude\ConversorMD2DocX\dist\md2docx.exe` quando o runtime empacotado ja estiver validado em ambiente limpo.
+2. Reduzir tamanho do bundle do renderer.
+3. Remover fallback absoluto para `C:\Users\jairs\Claude\ConversorMD2DocX\dist\md2docx.exe` quando o runtime empacotado ja estiver validado em ambiente limpo.
+
+## Encerramento da secao 2026-06-23
+
+Estado salvo e documentado para retomada.
+
+1. Testes finais executados: `npm test`, `node --check` em `src/main/main.cjs` e `src/main/preload.cjs`, `python -m py_compile` em `scripts/pdf_ocr.py` e `scripts/build_ocr_runtime.py`, alem de `git diff --check`.
+2. Artefato final confirmado em `release/MDWord-0.1.1-Setup.exe`.
+3. `release/` e runtimes locais permanecem ignorados pelo Git conforme `.gitignore`.
+4. Conexao medida em 2026-06-23: download 298,61 Mbit/s e upload 220,22 Mbit/s.
+5. Proxima retomada deve comecar por teste manual do instalador `0.1.1`, especialmente `Ctrl+Shift+V`, perfil com tabelas e OCR em PDF escaneado real.

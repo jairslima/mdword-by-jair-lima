@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, dialog, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, clipboard, dialog, ipcMain } = require('electron');
 const fsSync = require('node:fs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
@@ -173,12 +173,13 @@ function buildMenu() {
     {
       label: 'Editar',
       submenu: [
-        { role: 'undo', label: 'Desfazer' },
+        { label: 'Desfazer', accelerator: 'CmdOrCtrl+Z', click: () => sendMenuAction('undo') },
         { role: 'redo', label: 'Refazer' },
         { type: 'separator' },
         { role: 'cut', label: 'Recortar' },
         { role: 'copy', label: 'Copiar' },
         { role: 'paste', label: 'Colar' },
+        { label: 'Colar como texto', accelerator: 'CmdOrCtrl+Shift+V', click: () => sendMenuAction('pastePlain') },
         { role: 'selectAll', label: 'Selecionar tudo' }
       ]
     },
@@ -408,9 +409,11 @@ async function printHtml(html, outputPdfPath) {
 
 ipcMain.handle('app:get-state', async () => ({
   recentDirectory: getRecentDirectory(),
-  pureMarkdownProfile: true,
+  markdownProfiles: ['pure', 'tables'],
   recentFiles: appSettings.recentFiles
 }));
+
+ipcMain.handle('clipboard:read-text', async () => clipboard.readText());
 
 ipcMain.handle('app:set-window-title', async (_event, title) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
