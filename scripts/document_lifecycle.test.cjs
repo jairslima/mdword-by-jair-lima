@@ -16,9 +16,9 @@ const assert = require('node:assert/strict');
     prepareMarkdownPaste
   } = await import('../src/shared/markdownPaste.js');
 
-assert.equal(buildWindowTitle({ dirty: false, filePath: '' }), 'Sem titulo.md - MDWord');
-assert.equal(buildWindowTitle({ dirty: true, filePath: '' }), '* Sem titulo.md - MDWord');
-assert.equal(buildWindowTitle({ dirty: true, filePath: 'C:\\Temp\\livro.md' }), '* livro.md - MDWord');
+assert.equal(buildWindowTitle({ dirty: false, filePath: '' }), 'Sem titulo.md - MDWord by Jair Lima');
+assert.equal(buildWindowTitle({ dirty: true, filePath: '' }), '* Sem titulo.md - MDWord by Jair Lima');
+assert.equal(buildWindowTitle({ dirty: true, filePath: 'C:\\Temp\\livro.md' }), '* livro.md - MDWord by Jair Lima');
 
 assert.equal(hasRecoverableDraft(''), false);
 assert.equal(hasRecoverableDraft('   \n'), false);

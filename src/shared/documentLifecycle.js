@@ -8,7 +8,7 @@ export function getDisplayName(filePath) {
 }
 
 export function buildWindowTitle({ dirty = false, filePath = '' } = {}) {
-  return `${dirty ? '* ' : ''}${getDisplayName(filePath)} - MDWord`;
+  return `${dirty ? '* ' : ''}${getDisplayName(filePath)} - MDWord by Jair Lima`;
 }
 
 export function hasRecoverableDraft(markdown) {

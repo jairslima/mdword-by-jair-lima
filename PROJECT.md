@@ -71,9 +71,14 @@ Documento novo nao salvo grava rascunho em `localStorage` e oferece recuperacao 
 ## Estado atual
 
 - Versao: 0.1.1
-- Instalador gerado: `release/MDWord-0.1.1-Setup.exe` (2026-06-22)
+- Instalador gerado: `release/MDWord-0.1.1-Setup.exe` (2026-07-14, reconstruido)
 - Colagem Markdown formatada, colagem como texto, desfazer de colagens, perfis Markdown e OCR otimizado concluidos.
 - Instalador reduzido para 198,23 MiB. Helper OCR reduzido para 27,46 MB.
+
+### Incidente resolvido em 2026-07-14: colagem parou de formatar
+A correcao de colagem (`src/shared/markdownPaste.js` + interceptacao em `App.jsx`) foi implementada no commit `accfb70` (23/06), mas o instalador em `release/` havia sido gerado em 22/06, um dia **antes** desse commit — nunca existiu um build empacotado com a correcao. A instalacao em `C:\Program Files\MDWord` era ainda mais antiga (07/05). `node_modules` tambem estava ausente (removido em 30/06 para liberar espaco, nunca restaurado), o que fazia `npm run dist` falhar silenciosamente na etapa `electron-builder` (comando nao encontrado) sem abortar o script com erro visivel.
+Correcao: `npm install` + `npm run dist` para gerar instalador novo a partir do HEAD atual, depois reinstalado em `C:\Program Files\MDWord`. Validado pelo usuario colando conteudo real.
+**Licao:** ao concluir uma correcao de bug de UI, sempre confirmar que existe um build/instalador **posterior ao commit da correcao** antes de considerar o problema resolvido — codigo-fonte corrigido nao equivale a app instalado corrigido.
 
 ## Próximos passos
 
@@ -81,6 +86,16 @@ Documento novo nao salvo grava rascunho em `localStorage` e oferece recuperacao 
 2. Melhorar heurística de OCR para parágrafos, listas e colunas.
 3. Reduzir tamanho do bundle do renderer.
 4. Remover fallback absoluto para `C:\Users\jairs\Claude\ConversorMD2DocX\dist\md2docx.exe` quando o runtime empacotado estiver validado.
+
+## Manutenção de disco
+
+| Data | Ação | Espaço liberado |
+|------|------|----------------|
+| 2026-06-30 | `node_modules` removido | ~707 MB |
+
+**Regra (desde 2026-07-14): NÃO apagar `node_modules` deste projeto para liberar espaço.** A remoção de 30/06 deixou `npm run dist` falhar silenciosamente (etapa `electron-builder` não encontrada) sem abortar visivelmente o script, o que atrasou a detecção do bug de colagem resolvido em 14/07 — ver incidente acima. Se for necessário liberar espaço em disco, usar outro projeto/pasta como alvo.
+
+Caso `node_modules` já tenha sido removido antes desta regra existir, restaurar com `npm install` na raiz do projeto.
 
 ## Problemas conhecidos / bugs abertos
 

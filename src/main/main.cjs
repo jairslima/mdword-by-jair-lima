@@ -1,3 +1,4 @@
+// MDWord by Jair Lima — processo principal Electron (janelas, menus, IPC)
 const { app, BrowserWindow, Menu, clipboard, dialog, ipcMain } = require('electron');
 const fsSync = require('node:fs');
 const fs = require('node:fs/promises');
@@ -253,7 +254,7 @@ function createMainWindow() {
     minWidth: 1100,
     minHeight: 720,
     backgroundColor: '#e3d7c1',
-    title: 'MDWord',
+    title: 'MDWord by Jair Lima',
     icon: getAssetPath('app-icon.png'),
     autoHideMenuBar: false,
     webPreferences: {
@@ -417,7 +418,7 @@ ipcMain.handle('clipboard:read-text', async () => clipboard.readText());
 
 ipcMain.handle('app:set-window-title', async (_event, title) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setTitle(title || 'MDWord');
+    mainWindow.setTitle(title || 'MDWord by Jair Lima');
   }
   return { ok: true };
 });

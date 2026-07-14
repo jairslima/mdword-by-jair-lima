@@ -1,3 +1,4 @@
+// MDWord by Jair Lima — editor visual WYSIWYG de Markdown puro
 import { useEffect, useRef, useState } from 'react';
 import { Editor } from '@toast-ui/react-editor';
 import {
@@ -781,7 +782,7 @@ export default function App() {
     <div className="shell">
       <header className="window-header">
         <div className="window-title">
-          <strong>MDWord</strong>
+          <strong>MDWord by Jair Lima</strong>
           <span>{markdownProfile === 'tables' ? 'Editor visual para Markdown com tabelas' : 'Editor visual para Markdown puro'}</span>
         </div>
         <div className="document-meta">
@@ -953,6 +954,9 @@ export default function App() {
       <footer className="statusbar">
         <span>{status}</span>
         <span>{dirty ? 'Alteracoes pendentes' : lastSavedAt ? `Salvo as ${lastSavedAt}` : 'Tudo salvo'}</span>
+        <span className="build-info" title="Versao e build instalados">
+          v{__APP_VERSION__} &bull; build {__BUILD_HASH__} ({__BUILD_DATE__})
+        </span>
       </footer>
     </div>
   );
