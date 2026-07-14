@@ -86,6 +86,17 @@ Correcao: `npm install` + `npm run dist` para gerar instalador novo a partir do 
 2. Melhorar heurística de OCR para parágrafos, listas e colunas.
 3. Reduzir tamanho do bundle do renderer.
 4. Remover fallback absoluto para `C:\Users\jairs\Claude\ConversorMD2DocX\dist\md2docx.exe` quando o runtime empacotado estiver validado.
+5. Acompanhar o PR de submissão ao winget: https://github.com/microsoft/winget-pkgs/pull/402513 (aguardando validação automática + revisão da Microsoft). Assinar o CLA se o bot solicitar.
+6. Considerar assinatura Authenticode do instalador (hoje é unsigned; SmartScreen mostra aviso de "editor desconhecido" no primeiro uso, mencionado no PR do winget).
+
+## Publicação winget
+
+- **PackageIdentifier:** `JairLima.MDWord`
+- **Manifesto:** `manifests/j/JairLima/MDWord/0.1.1/` (schema 1.6.0), validado com `winget validate` e testado com `winget install --manifest` (instalação silenciosa real, com sucesso).
+- **Release usada como fonte:** https://github.com/jairslima/mdword-by-jair-lima/releases/tag/v0.1.1
+- **Fork:** https://github.com/jairslima/winget-pkgs (branch `JairLima.MDWord-0.1.1`)
+- **PR:** https://github.com/microsoft/winget-pkgs/pull/402513
+- Armadilha encontrada durante o teste: um processo de instalador interativo (`MDWord-0.1.1-Setup.exe`) deixado aberto em segundo plano segura o mutex nomeado do NSIS e faz qualquer instalação silenciosa (`/S`) subsequente abortar com exit code 2. Sempre fechar/instalar até o fim qualquer instalador aberto antes de testar `/S`.
 
 ## Manutenção de disco
 
