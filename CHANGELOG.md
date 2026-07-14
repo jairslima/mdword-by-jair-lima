@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2026-07-14
+
+1. Adicionada marca "by Jair Lima" no titulo da janela, no label visivel da UI e no cabecalho dos modulos principais.
+2. Adicionado indicador de versao e hash de build no rodape, para verificar se o app instalado corresponde ao codigo-fonte mais recente.
+3. Reempacotado o instalador 0.1.1 com a correcao de colagem Markdown (commit `accfb70`, 23/06) que nunca havia sido incluida em um build publicado.
+
 ## 2026-06-22
 
 1. Revisada a colagem de Markdown no modo visual para interpretar o bloco na selecao atual, em vez de recompor o documento inteiro ou inserir os marcadores como texto literal.
