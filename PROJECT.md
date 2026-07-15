@@ -86,8 +86,8 @@ Correcao: `npm install` + `npm run dist` para gerar instalador novo a partir do 
 2. Melhorar heurística de OCR para parágrafos, listas e colunas.
 3. Reduzir tamanho do bundle do renderer.
 4. Remover fallback absoluto para `C:\Users\jairs\Claude\ConversorMD2DocX\dist\md2docx.exe` quando o runtime empacotado estiver validado.
-5. Acompanhar o PR de submissão ao winget: https://github.com/microsoft/winget-pkgs/pull/402513 (aguardando validação automática + revisão da Microsoft). Assinar o CLA se o bot solicitar.
-6. Considerar assinatura Authenticode do instalador (hoje é unsigned; SmartScreen mostra aviso de "editor desconhecido" no primeiro uso, mencionado no PR do winget).
+5. Acompanhar o PR de submissão ao winget: https://github.com/microsoft/winget-pkgs/pull/402513 (aguardando validação automática + revisão da Microsoft). CLA já assinado em 14/07 (`license/cla: SUCCESS`).
+6. **Decisão (2026-07-14):** não investir em assinatura Authenticode/EV/Trusted Signing por enquanto. Instalador continua unsigned; aviso de SmartScreen ("editor desconhecido") é aceito como conhecido e não bloqueante. Revisitar só se o usuário pedir.
 
 ## Publicação winget
 
