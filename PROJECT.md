@@ -86,8 +86,21 @@ Correcao: `npm install` + `npm run dist` para gerar instalador novo a partir do 
 2. Melhorar heurística de OCR para parágrafos, listas e colunas.
 3. Reduzir tamanho do bundle do renderer.
 4. Remover fallback absoluto para `C:\Users\jairs\Claude\ConversorMD2DocX\dist\md2docx.exe` quando o runtime empacotado estiver validado.
-5. Acompanhar o PR de submissão ao winget: https://github.com/microsoft/winget-pkgs/pull/402513 (aguardando validação automática + revisão da Microsoft). CLA já assinado em 14/07 (`license/cla: SUCCESS`).
-6. **Decisão (2026-07-14):** não investir em assinatura Authenticode/EV/Trusted Signing por enquanto. Instalador continua unsigned; aviso de SmartScreen ("editor desconhecido") é aceito como conhecido e não bloqueante. Revisitar só se o usuário pedir.
+5. Acompanhar o PR de submissão ao winget: https://github.com/microsoft/winget-pkgs/pull/402513. CLA assinado em 14/07 (`license/cla: SUCCESS`). **Status em 15/07: validação automática falhou** (label `Validation-Defender-Error` + `Needs-Author-Feedback`) — ver incidente abaixo. Comentário de resposta postado pedindo revisão/re-run de moderador. Monitorado por rotina na nuvem (`RemoteTrigger` `trig_01TktfHtDB789KAb9M3esNsj`, roda 2x/dia); retomar quando o PR sinalizar novidade (merge, fechamento, comentário humano real ou nova label).
+6. **Decisão (2026-07-14, revisitada em 15/07):** por ora o instalador segue unsigned. A falta de assinatura já causou dois efeitos concretos: aviso de SmartScreen para quem baixa direto do GitHub, e agora a provável causa do `Validation-Defender-Error` no winget (reputação desconhecida). Se o PR não for resolvido só com o comentário/re-run, assinatura (Trusted Signing) volta a ser a opção mais forte — considerar antes de insistir em mais debugging local.
+
+### Incidente 2026-07-15: `Validation-Defender-Error` no PR do winget
+
+O pipeline de validação da Microsoft (Azure DevOps build `WinGetSvc-Validation-146-402513-20260714-1`, id `366581`, resultado `failed`) instalou o `MDWord-0.1.1-Setup.exe` numa VM limpa e o Windows Defender sinalizou algo no teste dinâmico pós-instalação. PR recebeu as labels `Validation-Defender-Error` + `Needs-Author-Feedback` + `Validation-Guide`.
+
+**Tentativa de reproduzir localmente (sem sucesso):**
+- Windows Defender está com o motor **completamente desativado** nesta máquina (`Get-MpComputerStatus` → tudo `False`), porque o Kaspersky Total Security é o AV ativo e o Windows desliga o Defender por completo quando outro AV está registrado. Nem `MpCmdRun.exe -Scan` funciona nesse estado (`WARN: Product/Feature disabled`, hr=0x80004005).
+- Usuário pausou o Kaspersky por 5 minutos para o Windows reativar o Defender sozinho. O Security Center reconheceu o Kaspersky como "pausado" (`productState` mudou de `266240` para `270336`) e o serviço `WinDefend` chegou a iniciar (`Start-Service` funcionou), mas o motor de proteção continuou bloqueado por política mesmo assim (`MpCmdRun` repetiu `Product/Feature disabled` mesmo com o serviço rodando). **Conclusão: reativar o Defender via pausa curta do Kaspersky não é suficiente — a reavaliação completa do Windows parece exigir mais tempo ou reinício do sistema.** Não vale reinsistir nisso sem uma janela maior e dedicada.
+- Scan via Kaspersky (`avp.com SCAN "C:\Program Files\MDWord"`) também não serviu: ignorou o caminho passado e caiu numa tarefa de scan genérica, travada em 1% tocando pastas de outros programas (Topaz OFD, NVIDIA, Java). Interrompido.
+
+**Ação tomada:** comentário postado no PR (https://github.com/microsoft/winget-pkgs/pull/402513#issuecomment-4981787462) relatando que nenhuma detecção foi reproduzida localmente, apontando a falta de assinatura Authenticode como causa mais provável (falso positivo por reputação desconhecida), e pedindo revisão/re-run (`@wingetbot run`) de um moderador.
+
+**Se retomar este ponto no futuro:** não perder tempo tentando reativar o Defender com pausas curtas do Kaspersky — não funcionou. Se for necessário um scan local real, planejar um teste dedicado com Kaspersky desligado por mais tempo (ou reinício) fora do fluxo de uma sessão corrida. Ver guia oficial: https://github.com/microsoft/winget-pkgs/blob/master/doc/ValidationFailureGuide.md#validation-defender-error.
 
 ## Publicação winget
 
