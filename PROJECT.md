@@ -105,10 +105,16 @@ O pipeline de validação da Microsoft (Azure DevOps build `WinGetSvc-Validation
 ## Publicação winget
 
 - **PackageIdentifier:** `JairLima.MDWord`
-- **Manifesto:** `manifests/j/JairLima/MDWord/0.1.1/` (schema 1.6.0), validado com `winget validate` e testado com `winget install --manifest` (instalação silenciosa real, com sucesso).
-- **Release usada como fonte:** https://github.com/jairslima/mdword-by-jair-lima/releases/tag/v0.1.1
-- **Fork:** https://github.com/jairslima/winget-pkgs (branch `JairLima.MDWord-0.1.1`)
-- **PR:** https://github.com/microsoft/winget-pkgs/pull/402513
+- **Versão 0.1.1 (primeira submissão):**
+  - Manifesto: `manifests/j/JairLima/MDWord/0.1.1/` (schema 1.6.0), validado com `winget validate` e testado com `winget install --manifest`.
+  - Release: https://github.com/jairslima/mdword-by-jair-lima/releases/tag/v0.1.1
+  - Fork: https://github.com/jairslima/winget-pkgs (branch `JairLima.MDWord-0.1.1`)
+  - PR: https://github.com/microsoft/winget-pkgs/pull/402513 — deixado aberto como está (não fechado), superado pelo PR da 0.1.2 abaixo.
+- **Versão 0.1.2 (2026-08-01, corrige instalador travando em `/S` — ver incidente acima):**
+  - Manifesto: `manifests/j/JairLima/MDWord/0.1.2/` (schema 1.6.0), validado com `winget validate` **e** `winget install --manifest` real (baixou da release, hash conferido, instalou limpo).
+  - Release: https://github.com/jairslima/mdword-by-jair-lima/releases/tag/v0.1.2
+  - Fork: https://github.com/jairslima/winget-pkgs (branch `JairLima.MDWord-0.1.2`)
+  - PR: https://github.com/microsoft/winget-pkgs/pull/411082
 - Armadilha encontrada durante o teste: um processo de instalador interativo (`MDWord-0.1.1-Setup.exe`) deixado aberto em segundo plano segura o mutex nomeado do NSIS e faz qualquer instalação silenciosa (`/S`) subsequente abortar com exit code 2. Sempre fechar/instalar até o fim qualquer instalador aberto antes de testar `/S`.
 
 ## Manutenção de disco
@@ -149,4 +155,4 @@ Efeito colateral aceito: perdeu-se `allowToChangeInstallationDirectory` (usuári
 - Instalação silenciosa (`/S`): completa sozinha, sem travar, exit code 0, app abre sem crash.
 - Desinstalação silenciosa (`/S`): travou no primeiro teste (build 0.1.1); no reteste com o build 0.1.2 completou limpo — ver nota de inconsistência em "Problemas conhecidos" acima.
 
-**Decisão:** publicar como nova versão `0.1.2` (não sobrescrever o asset da v0.1.1). Instalador final validado: `release/MDWord-0.1.2-Setup.exe`, `/S` instala e fecha sozinho, app abre normalmente, `/S` de desinstalação também limpo no reteste. Próximo passo: criar tag `v0.1.2`, release no GitHub e novo PR no winget-pkgs apontando para o binário 0.1.2 (mantendo o PR #402513 como está, referente à 0.1.1).
+**Decisão:** publicado como nova versão `0.1.2` (não sobrescreveu o asset da v0.1.1). Feito: commit (`1fb6ca4`), tag `v0.1.2`, release https://github.com/jairslima/mdword-by-jair-lima/releases/tag/v0.1.2 com `MDWord-0.1.2-Setup.exe` como asset, e novo PR no winget-pkgs: https://github.com/microsoft/winget-pkgs/pull/411082 (PR #402513 da 0.1.1 deixado aberto como está, não fechado).
