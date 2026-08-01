@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2026-08-01
+
+1. Corrigido instalador NSIS que ficava com uma janela residual aberta ao rodar em modo silencioso (`/S`), o que provavelmente causava falha na validacao automatica do winget. Trocado de instalador assistido (`oneClick: false`) para instalador one-click (`oneClick: true`), que fecha sozinho apos a instalacao silenciosa. Efeito colateral: usuario final nao escolhe mais a pasta de instalacao (`allowToChangeInstallationDirectory` removido).
+2. Atualizada a versao do aplicativo para `0.1.2`.
+
 ## 2026-07-14
 
 1. Adicionada marca "by Jair Lima" no titulo da janela, no label visivel da UI e no cabecalho dos modulos principais.

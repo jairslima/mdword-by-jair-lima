@@ -86,7 +86,7 @@ Correcao: `npm install` + `npm run dist` para gerar instalador novo a partir do 
 2. Melhorar heurística de OCR para parágrafos, listas e colunas.
 3. Reduzir tamanho do bundle do renderer.
 4. Remover fallback absoluto para `C:\Users\jairs\Claude\ConversorMD2DocX\dist\md2docx.exe` quando o runtime empacotado estiver validado.
-5. Acompanhar o PR de submissão ao winget: https://github.com/microsoft/winget-pkgs/pull/402513. CLA assinado em 14/07 (`license/cla: SUCCESS`). **Status em 15/07: validação automática falhou** (label `Validation-Defender-Error` + `Needs-Author-Feedback`) — ver incidente abaixo. Comentário de resposta postado pedindo revisão/re-run de moderador. Monitorado por rotina na nuvem (`RemoteTrigger` `trig_01TktfHtDB789KAb9M3esNsj`, roda 2x/dia); retomar quando o PR sinalizar novidade (merge, fechamento, comentário humano real ou nova label).
+5. Acompanhar o PR de submissão ao winget: https://github.com/microsoft/winget-pkgs/pull/402513. CLA assinado em 14/07 (`license/cla: SUCCESS`). **Status em 15/07: validação automática falhou** (label `Validation-Defender-Error` + `Needs-Author-Feedback`) — ver incidente abaixo. Comentário de resposta postado pedindo revisão/re-run de moderador. **Resolvido em 16/07:** nova validação (`WinGetSvc-Validation-148-402513-20260715-1`) passou, labels viraram `Azure-Pipeline-Passed`+`Validation-Completed`. Estado atual: aguardando aprovação de moderador humano voluntário — última etapa manual, nada mais pendente da nossa parte. Monitorado por rotina na nuvem (`RemoteTrigger` `trig_01TktfHtDB789KAb9M3esNsj`, roda 2x/dia).
 6. **Decisão (2026-07-14, revisitada em 15/07):** por ora o instalador segue unsigned. A falta de assinatura já causou dois efeitos concretos: aviso de SmartScreen para quem baixa direto do GitHub, e agora a provável causa do `Validation-Defender-Error` no winget (reputação desconhecida). Se o PR não for resolvido só com o comentário/re-run, assinatura (Trusted Signing) volta a ser a opção mais forte — considerar antes de insistir em mais debugging local.
 
 ### Incidente 2026-07-15: `Validation-Defender-Error` no PR do winget
@@ -125,3 +125,28 @@ Caso `node_modules` já tenha sido removido antes desta regra existir, restaurar
 
 - Aviso de `duplicate dependency references` no build (prosemirror/react duplicados) é inofensivo.
 - PyInstaller 7.0 bloqueará execução como administrador (aviso presente desde 6.19.0).
+- **Desinstalador: comportamento inconsistente em modo silencioso** (`Uninstall MDWord.exe /S`). No teste do fix (build 0.1.1, mesmo dia), a cópia temporária do desinstalador (`Un_A.exe` em `%TEMP%\~nsuXXXX.tmp\`) travou com janela "Desinstalação do MDWord" aberta. No reteste da versão 0.1.2 (mesmo `package.json`, poucas horas depois), a desinstalação silenciosa completou limpo, sem processo residual. Não identificada a variável que causa a diferença (possível AV escaneando o binário na primeira execução). Monitorar em usos futuros; não tratar como resolvido nem como bloqueante.
+
+### Incidente 2026-08-01: instalador silencioso (`/S`) travava com janela residual, corrigido
+
+Durante teste do PR do winget (ver seção de publicação), rodar `MDWord-0.1.1-Setup.exe /S` deixava uma janela "Instalação do MDWord" aberta indefinidamente (processo `MDWord-0.1.1-Setup.exe`, CPU baixo, sem fechar sozinho mesmo após a instalação dos arquivos já ter terminado), exigindo `Stop-Process` manual para liberar o terminal. Suspeita forte: é a mesma causa do erro reportado pelo moderador do winget no PR (`APPINSTALLER_CLI_ERROR_SHELLEXEC_INSTALL_FAILED` / `STATUS_ACCESS_VIOLATION`) — se a VM de validação da Microsoft também roda `/S` e a janela trava sem ninguém para fechá-la, o processo pode acabar sendo encerrado à força, produzindo esse código de saída parecido com crash.
+
+**Causa:** `"oneClick": false` no bloco `nsis` do `package.json` (instalador NSIS "assistido" via electron-builder). Instaladores assistidos gerados pelo electron-builder têm limitação conhecida: não fecham sozinhos sob `/S`.
+
+**Correção aplicada:** trocado para instalador one-click:
+```json
+"nsis": {
+  "oneClick": true,
+  "perMachine": false,
+  "createDesktopShortcut": "always",
+  "createStartMenuShortcut": true,
+  "runAfterFinish": false
+}
+```
+Efeito colateral aceito: perdeu-se `allowToChangeInstallationDirectory` (usuário final não escolhe mais a pasta; instala em `%LOCALAPPDATA%\Programs\mdword-by-jair-lima`, nome vindo do campo `name` do `package.json`, não do `productName`).
+
+**Validado localmente após rebuild (`npm run dist`):**
+- Instalação silenciosa (`/S`): completa sozinha, sem travar, exit code 0, app abre sem crash.
+- Desinstalação silenciosa (`/S`): travou no primeiro teste (build 0.1.1); no reteste com o build 0.1.2 completou limpo — ver nota de inconsistência em "Problemas conhecidos" acima.
+
+**Decisão:** publicar como nova versão `0.1.2` (não sobrescrever o asset da v0.1.1). Instalador final validado: `release/MDWord-0.1.2-Setup.exe`, `/S` instala e fecha sozinho, app abre normalmente, `/S` de desinstalação também limpo no reteste. Próximo passo: criar tag `v0.1.2`, release no GitHub e novo PR no winget-pkgs apontando para o binário 0.1.2 (mantendo o PR #402513 como está, referente à 0.1.1).
