@@ -42,6 +42,23 @@ npm run build:ocr # compila runtime OCR com PyInstaller
 npm run dist      # build completo + instalador NSIS
 ```
 
+### Release (build → GitHub → winget)
+
+`scripts/release.ps1` automatiza o fluxo repetitivo de publicar uma versão nova (criado em 2026-08-01, depois de fazer esse fluxo manualmente para 0.1.1 e 0.1.2). Pré-requisito: `version` do `package.json` e a entrada nova do `CHANGELOG.md` já devem estar atualizados antes de rodar.
+
+```powershell
+# só builda e faz smoke test local (instala/desinstala silencioso), não publica nada
+.\scripts\release.ps1 -Version 0.1.3 -CommitMessage "fix: ..." -ReleaseNotes "..."
+
+# builda + testa + commit/tag/push + release no GitHub (sem mexer no winget)
+.\scripts\release.ps1 -Version 0.1.3 -CommitMessage "fix: ..." -ReleaseNotes "..." -Publish
+
+# fluxo completo, incluindo manifesto novo + PR no winget-pkgs
+.\scripts\release.ps1 -Version 0.1.3 -CommitMessage "fix: ..." -ReleaseNotes "..." -Publish -WingetPR
+```
+
+Por padrão (sem `-Publish`/`-WingetPR`) o script não toca em git/GitHub/winget — só build e teste local, seguindo a prática desta sessão de nunca publicar sem confirmação explícita. `-WingetPR` detecta sozinho a versão anterior publicada em `manifests/j/JairLima/MDWord/` no fork para usar como template do manifesto novo (sem precisar clonar o repositório `winget-pkgs`, que é grande demais). Ainda não usado em produção — próxima vez que houver uma versão nova é o primeiro teste real do script; revisar a saída de cada etapa mesmo assim, não confiar cegamente na primeira execução.
+
 ## Decisões arquiteturais relevantes
 
 ### Renderização WYSIWYG de markdown
@@ -70,8 +87,8 @@ Documento novo nao salvo grava rascunho em `localStorage` e oferece recuperacao 
 
 ## Estado atual
 
-- Versao: 0.1.1
-- Instalador gerado: `release/MDWord-0.1.1-Setup.exe` (2026-07-14, reconstruido)
+- Versao: 0.1.2
+- Instalador gerado: `release/MDWord-0.1.2-Setup.exe` (2026-08-01, publicado)
 - Colagem Markdown formatada, colagem como texto, desfazer de colagens, perfis Markdown e OCR otimizado concluidos.
 - Instalador reduzido para 198,23 MiB. Helper OCR reduzido para 27,46 MB.
 
