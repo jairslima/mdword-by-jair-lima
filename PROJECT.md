@@ -109,7 +109,7 @@ O pipeline de validação da Microsoft (Azure DevOps build `WinGetSvc-Validation
   - Manifesto: `manifests/j/JairLima/MDWord/0.1.1/` (schema 1.6.0), validado com `winget validate` e testado com `winget install --manifest`.
   - Release: https://github.com/jairslima/mdword-by-jair-lima/releases/tag/v0.1.1
   - Fork: https://github.com/jairslima/winget-pkgs (branch `JairLima.MDWord-0.1.1`)
-  - PR: https://github.com/microsoft/winget-pkgs/pull/402513 — deixado aberto como está (não fechado), superado pelo PR da 0.1.2 abaixo.
+  - PR: https://github.com/microsoft/winget-pkgs/pull/402513 — **fechado em 2026-08-01** (comentário explicando que foi superado pelo PR da 0.1.2, sem merge), ver PR da 0.1.2 abaixo.
 - **Versão 0.1.2 (2026-08-01, corrige instalador travando em `/S` — ver incidente acima):**
   - Manifesto: `manifests/j/JairLima/MDWord/0.1.2/` (schema 1.6.0), validado com `winget validate` **e** `winget install --manifest` real (baixou da release, hash conferido, instalou limpo).
   - Release: https://github.com/jairslima/mdword-by-jair-lima/releases/tag/v0.1.2
